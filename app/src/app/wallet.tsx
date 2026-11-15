@@ -2,7 +2,7 @@ import { useAction, useQuery } from 'convex/react';
 import { ConvexError } from 'convex/values';
 import { useRef, useState } from 'react';
 import type { ComponentRef } from 'react';
-import { Alert, ScrollView, TextInput, View } from 'react-native';
+import { Alert, TextInput, View } from 'react-native';
 
 import { api } from '../../convex/_generated/api';
 import { useSession } from '@/lib/session';
@@ -59,7 +59,7 @@ function tasteSummary(liked: { tag: string; w: number }[], disliked: { tag: stri
 
 
 export default function WalletScreen() {
-  const { userId } = useSession();
+  const { userId, setUserId } = useSession();
   const wallet = useQuery(api.users.wallet, userId ? { userId } : 'skip');
   const taste = useQuery(api.prefs.taste, userId ? { userId } : 'skip');
   const cashout = useAction(api.payments.cashout);
@@ -82,8 +82,7 @@ export default function WalletScreen() {
   const { streak, reactedToday } = computeStreak(valid.map((i) => i.at));
 
   return (
-    <Screen>
-      <ScrollView contentContainerStyle={{ gap: tokens.space.xl, paddingBottom: 120 }}>
+    <Screen style={{ gap: tokens.space.xl }}>
         <View style={{ gap: tokens.space.xs }}><Muted>YOUR EARNINGS</Muted><Title style={{ fontSize: 36 }}>Wallet</Title></View>
         {wallet.verifiedStudent ? <VerifiedStudentBadge school={wallet.school} /> : null}
 
@@ -167,7 +166,7 @@ export default function WalletScreen() {
             ))}
           </View>
         )}
-      </ScrollView>
+        <Button label="Sign out / switch account" variant="secondary" onPress={() => setUserId(null)} />
     </Screen>
   );
 }

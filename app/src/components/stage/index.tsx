@@ -1,5 +1,5 @@
 import { ComponentRef, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, AppState, Modal, Platform, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Animated, AppState, Modal, Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useEventListener } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
@@ -82,8 +82,7 @@ export function Stage({ gigId, onClose }: { gigId: Id<'gigs'>; onClose: () => vo
   }, [fullscreen, onClose]);
   return <Modal visible animationType="fade" presentationStyle="fullScreen" onRequestClose={onClose}>
     <View ref={root} style={mediaLayout.root}>
-      <Screen>
-        <ScrollView contentContainerStyle={mediaLayout.content}>
+      <Screen style={mediaLayout.content}>
           <View style={mediaLayout.row}>
             <View style={{ flex: 1, gap: 2 }}><Muted>REAL · LIVE REACTION ROOM</Muted><Title>{gig?.title ?? 'Live reactions'}</Title></View>
             <Button label="Close" variant="secondary" onPress={onClose} />
@@ -117,7 +116,6 @@ export function Stage({ gigId, onClose }: { gigId: Id<'gigs'>; onClose: () => vo
               </View>
             </View>
           </>}
-        </ScrollView>
       </Screen>
     </View>
   </Modal>;

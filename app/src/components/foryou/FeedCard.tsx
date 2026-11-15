@@ -27,7 +27,9 @@ export function FeedCard({ item, onLeft, onRight, onPrimary, locked, onLocked }:
   const fly = (dir: 1 | -1, done: () => void) => Animated.timing(x, { toValue: dir * 600, duration: 180, useNativeDriver: true }).start(done);
   const pan = useRef(PanResponder.create({
     onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy),
+    onPanResponderTerminationRequest: () => false,
     onPanResponderMove: (_, g) => x.setValue(g.dx),
+    onPanResponderTerminate: () => Animated.spring(x, { toValue: 0, useNativeDriver: true }).start(),
     onPanResponderRelease: (_, g) => {
       if (g.dx > SWIPE_PX) fly(1, onRight);
       else if (g.dx < -SWIPE_PX) fly(-1, onLeft);

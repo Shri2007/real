@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from 'convex/react';
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 import { FeedCard } from '@/components/foryou/FeedCard';
 import { MyUgc } from '@/components/foryou/MyUgc';
 import { EduVerify } from '@/components/EduVerify';
@@ -36,7 +36,7 @@ export default function ForYouScreen() {
     } catch (e) { setError(e instanceof Error ? e.message : 'Something went wrong. Try again.'); }
   };
 
-  return <Screen><ScrollView contentContainerStyle={{ gap: tokens.space.xl, paddingBottom: tokens.space.xxl }}>
+  return <Screen style={{ gap: tokens.space.xl }}>
     <View style={{ gap: tokens.space.xs }}>
       <Muted>REAL · YOUR REACTION FEED</Muted>
       <Title style={{ fontSize: 36 }}>For you</Title>
@@ -81,5 +81,5 @@ export default function ForYouScreen() {
       </>}
       {!!error && <Body>{error}</Body>}
     </>}
-  </ScrollView></Screen>;
+  </Screen>;
 }

@@ -1,5 +1,6 @@
 import { ConvexProvider, ConvexReactClient } from 'convex/react';
-import { DarkTheme, ThemeProvider } from 'expo-router';
+import { DefaultTheme, ThemeProvider } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
@@ -22,7 +23,8 @@ export default function RootLayout() {
   return (
     <ConvexProvider client={convex}>
       <SessionProvider>
-        <ThemeProvider value={DarkTheme}>
+        <ThemeProvider value={{ ...DefaultTheme, colors: { ...DefaultTheme.colors, background: '#FFFFFF', card: '#FFFFFF', text: '#0A0B0A' } }}>
+          <StatusBar style="dark" />
           <AnimatedSplashOverlay />
           <Gate />
         </ThemeProvider>

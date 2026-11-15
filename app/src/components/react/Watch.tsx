@@ -4,7 +4,7 @@ import { FunctionReturnType } from 'convex/server';
 import { useFocusEffect } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, BackHandler, ScrollView, StyleSheet, View } from 'react-native';
+import { AppState, BackHandler, StyleSheet, View } from 'react-native';
 import { LaughDetector, LaughDetectorHandle, LaughScore } from '@/laugh/LaughDetector';
 import { WhyRecorder } from './WhyRecorder';
 import { Badge, Body, Button, Card, Muted, PrimaryCTA, Screen, Title, VideoFrame, tokens } from '@/ui';
@@ -16,7 +16,7 @@ type Result = FunctionReturnType<typeof api.reactions.submit>;
 type Point = { t: number; s: number | null };
 
 const mediaLayout = StyleSheet.create({
-  page: { gap: tokens.space.lg, paddingBottom: tokens.space.xxl },
+  page: { gap: tokens.space.lg },
   video: { width: '100%', aspectRatio: 16 / 9 },
   watchRow: { flexDirection: 'row', alignItems: 'center', gap: tokens.space.md },
   selfie: { width: 72, height: 72, borderRadius: 36, overflow: 'hidden', borderWidth: 2, borderColor: tokens.accent },
@@ -120,7 +120,7 @@ function Playback({ gigId, userId, onBack, title, question, videoUrl }: Props & 
     curve.current.push({ t, s: score.noFace || !Number.isFinite(score.s) ? null : Math.min(1, Math.max(0, score.s)) });
     if (curve.current.length >= 8000) finishRef.current(false);
   }
-  return <Screen><ScrollView contentContainerStyle={mediaLayout.page}>
+  return <Screen style={mediaLayout.page}>
     <View style={{ gap: tokens.space.xs }}>
       <Muted>PAID REACTION · CAMERA ON</Muted>
       <Title>{title}</Title>
@@ -172,5 +172,5 @@ function Playback({ gigId, userId, onBack, title, question, videoUrl }: Props & 
       {error && <Button label="Retry saving reaction" onPress={() => { void save(); }} />}
       <Button label="Back to feed" onPress={onBack} />
     </>)}
-  </ScrollView></Screen>;
+  </Screen>;
 }

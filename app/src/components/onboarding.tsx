@@ -15,8 +15,10 @@ import {
   Body,
   Button,
   Card,
+  ChoiceCard,
   Muted,
   Screen,
+  SectionHeader,
   Title,
   tokens,
 } from '@/ui';
@@ -41,6 +43,7 @@ export function Onboarding() {
   const { setUserId } = useSession();
   const router = useRouter();
   const [role, setRole] = useState<'student' | 'brand' | null>(null);
+  const [pick, setPick] = useState<'student' | 'brand' | null>(null);
   const createUser = useMutation(api.users.create);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -54,19 +57,18 @@ export function Onboarding() {
   const schoolPreview = useMemo(() => previewEdu(email), [email]);
   const canContinue = name.trim().length > 0 && !busy;
 
-  if (!role) return <Screen style={{ justifyContent: 'center', gap: tokens.space.lg }}>
+  if (!role) return <Screen style={{ justifyContent: 'center', gap: tokens.space.xl }}>
     <View style={{ gap: tokens.space.sm }}>
       <Badge tone="good">REAL · VERIFIED REACTIONS</Badge>
       <Title style={{ fontSize: 48, letterSpacing: -2 }}>REAL</Title>
       <Body>Get paid for honest reactions. Know what lands before you post.</Body>
     </View>
-    <Card style={{ gap: tokens.space.md }}>
-      <Body>Who are you?</Body>
-      <Button label="I'm a student / creator" onPress={() => setRole('student')} />
-      <Muted>React to clips and get paid UGC jobs. Needs a .edu email.</Muted>
-      <Button label="I'm a brand / company" variant="secondary" onPress={() => setRole('brand')} />
-      <Muted>Test your ads on verified Gen Z and post paid UGC jobs.</Muted>
-    </Card>
+    <View style={{ gap: tokens.space.md }}>
+      <SectionHeader title="How will you use REAL?" />
+      <ChoiceCard title="Student / creator" body="React to clips, get paid, and pick UGC jobs made for your taste. Verify with your .edu." selected={pick === 'student'} onPress={() => setPick('student')} />
+      <ChoiceCard title="Business / brand" body="Test ads on verified Gen Z before you spend, and hire students to make UGC." selected={pick === 'brand'} onPress={() => setPick('brand')} />
+    </View>
+    <Button label={pick === 'brand' ? 'Continue as a business' : pick === 'student' ? 'Continue as a student' : 'Choose one to continue'} disabled={!pick} onPress={() => setRole(pick)} />
   </Screen>;
   if (created && step === 'verify') return <Screen style={{ justifyContent: 'center', gap: tokens.space.lg }}>
     <View style={{ gap: tokens.space.sm }}>
@@ -83,7 +85,7 @@ export function Onboarding() {
   return (
     <Screen style={{ justifyContent: 'center', gap: tokens.space.lg }}>
       <View style={{ gap: tokens.space.sm }}>
-        <Muted>REAL · {role === 'brand' ? 'CREATOR ACCOUNT' : 'REACTOR ACCOUNT'}</Muted>
+        <Muted>REAL · {role === 'brand' ? 'BUSINESS ACCOUNT' : 'STUDENT ACCOUNT'}</Muted>
         <Title style={{ fontSize: 36 }}>{role === 'brand' ? 'Set up your brand' : 'Set up your profile'}</Title>
         <Body>{role === 'brand' ? 'Your brand name is what students see on your jobs.' : 'Pick a name and color. Next, verify your school email.'}</Body>
       </View>
@@ -193,7 +195,7 @@ export function Onboarding() {
         />
       </Card>
 
-      <Button label="Back" variant="secondary" onPress={() => setRole(null)} />
+      <Button label="Back" variant="secondary" onPress={() => { setRole(null); setPick(null); }} />
       {role === 'student' && <Muted>Your camera is only on while you watch a clip. We pay for attention, not applause.</Muted>}
     </Screen>
   );
