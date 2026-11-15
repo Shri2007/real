@@ -83,8 +83,8 @@ export function NewTest({ userId, onDone, onCancel }: { userId: Id<'users'>; onD
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not publish. Please retry.'); }
     finally { lock.current = false; setBusy(false); setStep(''); }
   };
-  return <Card style={{ gap: tokens.space.lg }}>
-    <View style={{ gap: tokens.space.xs }}>
+  return <Card style={{ gap: tokens.space.xl }}>
+    <View style={{ gap: tokens.space.sm }}>
       <Badge tone="good">NEW REACTION TEST</Badge>
       <SectionHeader title="One video. One question." />
       <Muted>Find the moment your audience responds to.</Muted>
@@ -94,10 +94,10 @@ export function NewTest({ userId, onDone, onCancel }: { userId: Id<'users'>; onD
       <ClipPlayer key={asset.uri} uri={asset.uri} onDuration={setDuration} />
       <Muted>{duration === 0 ? 'Checking video duration…' : validDuration(duration) ? `${duration.toFixed(1)}s · duration verified` : 'Video exceeds 30 seconds. Choose a shorter clip.'}</Muted>
     </>}
-    <View style={{ gap: tokens.space.md }}>
+    <View style={{ gap: tokens.space.lg }}>
     {([
       ['Title', title, setTitle, false], ['Question (optional)', question, setQuestion, false], ['Reaction slots', slots, setSlots, true], ['Cents per reaction', price, setPrice, true],
-    ] as const).map(([label, value, change, numeric]) => <View key={label} style={{ gap: tokens.space.xs }}>
+    ] as const).map(([label, value, change, numeric]) => <View key={label} style={{ gap: tokens.space.sm }}>
       <Body>{label}</Body>
       <View style={{ flexDirection: 'row', gap: tokens.space.xs, alignItems: 'center' }}>
         {numeric && <Button label="−" variant="secondary" disabled={busy || !!draft || Number(value) <= 1} onPress={() => change(String(Math.max(1, Number(value || 1) - (label === 'Reaction slots' ? 1 : 25))))} style={{ minWidth: 48 }} />}
