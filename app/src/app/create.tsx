@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 import { useQuery } from 'convex/react';
 import { useSession } from '@/lib/session';
 import { Badge, Body, Button, Card, EmptyState, Muted, Screen, SectionHeader, Title, tokens } from '@/ui';
@@ -15,7 +15,7 @@ export default function CreateScreen() {
   const [selected, setSelected] = useState<Id<'gigs'> | null>(null);
   const [a, setA] = useState<Id<'gigs'> | null>(null);
   const [b, setB] = useState<Id<'gigs'> | null>(null);
-  return <Screen><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: tokens.space.xl, paddingBottom: tokens.space.xxl }}>
+  return <Screen style={{ gap: tokens.space.xl }}>
     <View style={{ gap: tokens.space.xs }}>
       <Muted>CREATOR STUDIO</Muted>
       <Title style={{ fontSize: 36 }}>Create</Title>
@@ -45,5 +45,5 @@ export default function CreateScreen() {
         {(a || b) && <Button label="Clear A/B selection" variant="secondary" onPress={() => { setA(null); setB(null); }} />}
       </>}
     </>}
-  </ScrollView></Screen>;
+  </Screen>;
 }

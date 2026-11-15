@@ -1,21 +1,21 @@
 // Shared UI primitives. ALL screens use these — restyle here to restyle the app.
-// Design: REAL — trustworthy, human, playful. Dark mode. Money-green for earnings.
+// Design: REAL — trustworthy, human, playful. Light mode: white background, black text. Money-green for earnings.
 import { ReactNode } from 'react';
-import { Keyboard, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export const tokens = {
-  bg: '#090B0A',
-  card: '#121613',
-  cardRaised: '#191E1A',
-  cardBorder: '#29312B',
-  text: '#F3F4EF',
-  muted: '#9AA39B',
-  accent: '#B4F34A',
-  accentDim: 'rgba(180, 243, 74, 0.12)',
-  live: '#B4F34A',
-  good: '#B4F34A',
-  bad: '#D89283',
+  bg: '#FFFFFF',
+  card: '#F6F7F5',
+  cardRaised: '#EDEFEB',
+  cardBorder: '#E1E4DF',
+  text: '#0A0B0A',
+  muted: '#5E655F',
+  accent: '#15803D',
+  accentDim: 'rgba(21, 128, 61, 0.10)',
+  live: '#15803D',
+  good: '#15803D',
+  bad: '#B4412F',
   radius: 20,
   radiusSm: 13,
   pad: 18,
@@ -31,16 +31,47 @@ export const tokens = {
   },
 };
 
-export function Screen({ children, style }: { children: ReactNode; style?: ViewStyle }) {
+/** Every screen scrolls by default; `style` styles the content. Taps outside a field and drags close the keyboard.
+ *  Don't nest a vertical ScrollView inside, and don't wrap content in a Pressable: it steals the scroll gesture. */
+export function Screen({ children, style, scroll = true }: { children: ReactNode; style?: ViewStyle; scroll?: boolean }) {
   return (
-    <SafeAreaView style={[styles.screen, style]} edges={['top', 'left', 'right']}>
-      {/* Tap anywhere outside a text field to close the keyboard (iOS number/text pads have no Done key). */}
+    <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss} accessible={false}>
-          {children}
-        </Pressable>
+        {scroll ? (
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={[styles.screenContent, style]}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            showsVerticalScrollIndicator={false}
+          >
+            {children}
+          </ScrollView>
+        ) : (
+          <Pressable style={[styles.screenContent, { flex: 1 }, style]} onPress={Keyboard.dismiss} accessible={false}>
+            {children}
+          </Pressable>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
+  );
+}
+
+/** Big tappable option (e.g. student vs brand at sign-up). */
+export function ChoiceCard({ title, body, selected, onPress }: { title: string; body: string; selected?: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: !!selected }}
+      style={({ pressed }) => [styles.card, styles.choice, selected && styles.choiceSelected, pressed && styles.buttonPressed]}
+    >
+      <View style={[styles.choiceDot, selected && styles.choiceDotSelected]} />
+      <View style={{ flex: 1, gap: 4 }}>
+        <Text style={styles.choiceTitle}>{title}</Text>
+        <Text style={styles.muted}>{body}</Text>
+      </View>
+    </Pressable>
   );
 }
 
@@ -262,9 +293,18 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: tokens.bg,
+  },
+  screenContent: {
+    flexGrow: 1,
     paddingHorizontal: tokens.pad,
     paddingTop: tokens.pad,
+    paddingBottom: 120,
   },
+  choice: { flexDirection: 'row', alignItems: 'center', gap: tokens.space.md, borderWidth: 1.5 },
+  choiceSelected: { borderColor: tokens.text, backgroundColor: tokens.bg },
+  choiceDot: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: tokens.cardBorder },
+  choiceDotSelected: { borderColor: tokens.text, borderWidth: 7 },
+  choiceTitle: { color: tokens.text, fontSize: tokens.type.subtitle, fontWeight: '700', letterSpacing: -0.3 },
   card: {
     backgroundColor: tokens.card,
     borderRadius: tokens.radius,
@@ -295,7 +335,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   buttonLabel: {
-    color: tokens.bg,
+    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: tokens.type.body,
     letterSpacing: -0.15,
@@ -332,10 +372,10 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.accentDim,
   },
   badgeMuted: {
-    backgroundColor: 'rgba(154, 163, 155, 0.12)',
+    backgroundColor: 'rgba(94, 101, 95, 0.10)',
   },
   badgeBad: {
-    backgroundColor: 'rgba(216, 146, 131, 0.12)',
+    backgroundColor: 'rgba(180, 65, 47, 0.10)',
   },
   badgeText: {
     fontSize: tokens.type.badge,
@@ -359,7 +399,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: {
-    color: tokens.bg,
+    color: '#0A0B0A',
     fontWeight: '800',
   },
   money: {
@@ -427,7 +467,7 @@ const styles = StyleSheet.create({
   chipGood: { backgroundColor: tokens.accentDim },
   chipLive: { backgroundColor: tokens.accentDim },
   chipMuted: { backgroundColor: tokens.cardRaised },
-  chipBad: { backgroundColor: 'rgba(216, 146, 131, 0.12)' },
+  chipBad: { backgroundColor: 'rgba(180, 65, 47, 0.10)' },
   chipText: { fontSize: tokens.type.badge, fontWeight: '700', letterSpacing: 0.1 },
   chipTextGood: { color: tokens.good },
   chipTextLive: { color: tokens.live },

@@ -1,6 +1,6 @@
 import { useQuery } from 'convex/react';
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 import { Watch } from '@/components/react/Watch';
 import { useSession } from '@/lib/session';
 import { Badge, Body, Button, Card, EmptyState, Money, Muted, Screen, SectionHeader, Title, tokens } from '@/ui';
@@ -12,8 +12,7 @@ export default function ReactorScreen() {
   const gigs = useQuery(api.gigs.feed, userId ? { userId } : 'skip');
   const [gigId, setGigId] = useState<Id<'gigs'> | null>(null);
   if (gigId && userId) return <Watch key={gigId} gigId={gigId} userId={userId} onBack={() => setGigId(null)} />;
-  return <Screen>
-    <ScrollView contentContainerStyle={{ gap: tokens.space.lg, paddingBottom: tokens.space.xxl }}>
+  return <Screen style={{ gap: tokens.space.lg }}>
       <View style={{ gap: tokens.space.xs }}>
         <Muted>REAL · PAID REACTIONS</Muted>
         <Title style={{ fontSize: 36 }}>React</Title>
@@ -34,6 +33,5 @@ export default function ReactorScreen() {
           </View>
           <Button label="Watch clip · earn" disabled={gig.slotsLeft <= 0} onPress={() => setGigId(gig._id)} />
         </Card>)}
-    </ScrollView>
   </Screen>;
 }
