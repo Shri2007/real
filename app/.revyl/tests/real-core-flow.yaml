@@ -17,13 +17,27 @@ test:
         name: OPEN MIC iOS
     blocks:
         - type: validation
-          step_description: The onboarding screen shows the REAL title and a "Your name" text field.
+          step_description: The REAL welcome screen offers student/creator and brand/company setup options.
+        - type: instructions
+          step_description: Tap "I'm a student / creator".
+        - type: validation
+          step_description: The student setup screen shows a "Your name" field.
         - type: instructions
           step_description: Tap the "Your name" field and type "Revyl Tester".
         - type: instructions
           step_description: Tap the Continue button.
         - type: validation
-          step_description: The React tab is visible with a list of paid gigs, each showing a price and spots left.
+          step_description: The student verification screen shows a "Skip for now" option.
+        - type: instructions
+          step_description: Tap "Skip for now" to continue to interests.
+        - type: instructions
+          step_description: Select any three interests and tap Continue.
+        - type: validation
+          step_description: The app feed is visible after onboarding.
+        - type: instructions
+          step_description: Tap the React tab.
+        - type: validation
+          step_description: The React tab shows paid gigs with a price and spots left.
         - type: instructions
           step_description: 'On the gig titled "Demo: is this funny?", tap "Watch clip".'
         - type: validation
