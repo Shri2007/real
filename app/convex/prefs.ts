@@ -232,12 +232,8 @@ export const feed = query({
         reason: `Picked for you: you're into ${liked.slice(0, 2).join(" + ")}`,
       });
     }
-    const out: (typeof feedItem.type)[] = [];
-    while (orderedClips.length || ugc.length) {
-      const next = out.length % 3 === 0 && ugc.length ? ugc.shift()! : orderedClips.shift() ?? ugc.shift()!;
-      out.push(next);
-    }
-    return out.slice(0, 30);
+    // Clips are the swipe feed; matched UGC jobs follow them and the app lists them in their own section.
+    return [...orderedClips.slice(0, 30), ...ugc.slice(0, 20)];
   },
 });
 

@@ -43,7 +43,7 @@ export function EduVerify({ userId, initialEmail = '', onVerified }: { userId: I
       <Muted>We email a 6-digit code to your school address. Only verified students can pick paid UGC jobs.</Muted>
     </> : <>
       <Body>Enter the code we sent to {sentTo}</Body>
-      <TextInput accessibilityLabel="Verification code" placeholder="123456" placeholderTextColor={tokens.muted} value={code} onChangeText={setCode}
+      <TextInput accessibilityLabel="Verification code" placeholder="123456" placeholderTextColor={tokens.faint} value={code} onChangeText={setCode}
         keyboardType="number-pad" textContentType="oneTimeCode" maxLength={6} style={[input, { fontSize: tokens.type.title, letterSpacing: 8, textAlign: 'center' }]} />
       <Button label={busy ? 'Checking…' : 'Verify'} disabled={busy || code.replace(/\D/g, '').length !== 6} onPress={() => run(async () => setSchool((await confirm({ userId, code })).school))} />
       <Button label="Send a new code" variant="secondary" disabled={busy} onPress={send} />

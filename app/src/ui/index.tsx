@@ -11,6 +11,7 @@ export const tokens = {
   cardBorder: '#E1E4DF',
   text: '#0A0B0A',
   muted: '#5E655F',
+  faint: '#C4C9C3',
   accent: '#15803D',
   accentDim: 'rgba(21, 128, 61, 0.10)',
   live: '#15803D',

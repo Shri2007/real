@@ -55,7 +55,7 @@ export const createGig = httpAction(async (ctx, req) => {
   if (typeof b.handle !== 'string' || !b.handle.trim() || b.handle.length > 256 || typeof b.title !== 'string' || !b.title.trim() || b.title.length > 200 || typeof b.videoUrl !== 'string' ||
     (b.name !== undefined && (typeof b.name !== 'string' || b.name.length > 100)) ||
     (b.question !== undefined && (typeof b.question !== 'string' || b.question.length > 1000))) return json({ error: 'Supply handle, title, videoUrl and optional name/question strings' }, 400);
-  const slots = b.slots ?? 5; const priceCents = b.priceCents ?? 50;
+  const slots = b.slots ?? 5; const priceCents = b.priceCents ?? 200;
   if (typeof slots !== 'number' || !Number.isInteger(slots) || slots < 3 || slots > 20 || typeof priceCents !== 'number' || !Number.isInteger(priceCents) || priceCents < 1 || priceCents > 10000) return json({ error: 'Use 3–20 slots and a positive integer priceCents (max 10000)' }, 400);
   let videoUrl: string;
   try { videoUrl = publicVideo(b.videoUrl); } catch (e) {
@@ -186,7 +186,7 @@ export const createUgc = httpAction(async (ctx, req) => {
   let b: Record<string, unknown>;
   try { b = await req.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
   if (typeof b.handle !== 'string' || !b.handle.trim() || typeof b.brief !== 'string' || !b.brief.trim() || b.brief.length > 1000) return json({ error: 'Supply handle and brief' }, 400);
-  const payoutCents = b.payoutCents ?? 2500; const spots = b.spots ?? 3;
+  const payoutCents = b.payoutCents ?? 10000; const spots = b.spots ?? 3;
   if (typeof payoutCents !== 'number' || !Number.isInteger(payoutCents) || payoutCents < 100 || payoutCents > 100000 || typeof spots !== 'number' || !Number.isInteger(spots) || spots < 1 || spots > 50) return json({ error: 'Use payoutCents 100–100000 and 1–50 spots' }, 400);
   const gigId = typeof b.gigId === 'string' ? await ctx.runQuery(normalizeRef, { gigId: b.gigId }) : null;
   const brandId = await ctx.runMutation(creatorRef, { handle: b.handle.trim() });
