@@ -141,17 +141,19 @@ export default function WalletScreen() {
         {wallet.items.length === 0 ? (
           <EmptyState title="No reactions yet" body="No earnings yet: watch a clip on React. You get paid for attention, laugh or not." />
         ) : (
-          wallet.items.map((i) => (
-            <Card key={i.reactionId} style={{ gap: 4 }}>
-              <Body>{i.gigTitle}</Body>
-              {i.valid ? (
-                <Badge tone="good">+${(i.earnedCents / 100).toFixed(2)}</Badge>
-              ) : (
-                <Badge tone="bad">Not paid: face out of frame</Badge>
-              )}
-              <Muted>{ago(i.at)}</Muted>
-            </Card>
-          ))
+          <View style={{ gap: 14 }}>
+            {wallet.items.map((i, idx) => (
+              <Card key={i.reactionId ?? `${i.at}-${idx}`} style={{ gap: 4 }}>
+                <Body>{i.gigTitle}</Body>
+                {i.valid ? (
+                  <Badge tone="good">+${(i.earnedCents / 100).toFixed(2)}</Badge>
+                ) : (
+                  <Badge tone="bad">Not paid: face out of frame</Badge>
+                )}
+                <Muted>{ago(i.at)}</Muted>
+              </Card>
+            ))}
+          </View>
         )}
       </ScrollView>
     </Screen>
