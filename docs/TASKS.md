@@ -1,5 +1,8 @@
 # TASKS: REAL (pivoted at 10:45 from OPEN MIC)
 
+> **11:35 TRACK PIVOT (small):** the only themed prizes are **Best use of Whop** and **Best use of Keiki**. So: **creators text their clip to the REAL iMessage agent (Keiki)**, pay through a **Whop** link, and get results texted back. **Reactors** use the app daily. Supermemory has no prize, so it's optional now.
+
+
 > **REAL: a marketplace for verified human reactions.** Creators post a clip and pay per reaction. Reactors watch it with the front camera on, get paid the same whether they laugh or not ("we pay for attention, not applause"), and on-device face detection proves a real human watched. Creators get a **live reaction curve**: "2 of 3 laughed at 0:04, attention dropped at 0:09."
 
 **Ground rules for every agent:** read `AGENTS.md`. Work only in your lane's files. Use the Convex API below through `api.*` (`import { api } from '../../convex/_generated/api'`; the path depends on file depth). Only Lane D edits `convex/`. **UI rule:** functionality only, using `@/ui` primitives (`Screen, Card, Button, Title, Body, Muted, tokens`). No custom styling in feature files; Lane A owns the design. Test on a real phone in Expo Go. Branch `lane-x/<thing>` → PR (Revyl checks it) → merge fast.
@@ -56,12 +59,33 @@ Read AGENTS.md and docs/TASKS.md. You own src/ui/ (design system), onboarding, t
 Must work in Expo Go. `npx tsc --noEmit`, branch lane-a/design-real, open a PR.
 ```
 
+## Lane K: Keiki iMessage agent (**Codex**, has the Keiki MCP), files: `app/convex/keiki.ts`, the `/keiki/*` routes in `app/convex/http.ts`, optional fields only in `schema.ts`
+```
+git checkout main && git pull && git checkout -b lane-k/keiki
+Read AGENTS.md, docs/TASKS.md, app/convex/_generated/ai/guidelines.md, and Keiki's docs: https://onkeiki.com/setup.md, https://onkeiki.com/docs/agent-api.md, https://onkeiki.com/llms.txt. Use the Keiki MCP tools (current_context, list_agent_templates, deploy_agent, talk_to_agent, list_channel_types, get_deployment).
+
+GOAL: creators text a clip to the REAL agent on iMessage and get verified human reactions back. Best-use-of-Keiki track.
+
+1. Convex HTTP tools for the agent (app/convex/keiki.ts + routes in app/convex/http.ts; create http.ts if it doesn't exist. Vishnu also adds a /whop/webhook route there, so keep routes separate and merge carefully):
+   - Auth: every request must send header `x-real-secret` == env KEIKI_TOOL_SECRET (npx convex env set KEIKI_TOOL_SECRET <random>). Reject otherwise.
+   - POST /keiki/gig  body {handle, name?, title, videoUrl, slots?, priceCents?, question?}: find-or-create the creator user by `handle` (ADD optional field `handle: v.optional(v.string())` + index by_handle to users; you may add OPTIONAL fields/indexes only, no renames). Fetch videoUrl, store it with ctx.storage.store(blob), create the gig via the same logic as api.gigs.create. Then: if internal/api payments.checkout exists, return {gigId, payUrl}; else publish it (free test) and return {gigId, live:true}.
+   - GET /keiki/results?gigId=...: returns a texting-friendly summary built from the same aggregation as api.reactions.results ("3 of 5 actually laughed · biggest laugh at 0:07 · lost them at 0:11") + the gig's `report` field if present.
+   - GET /keiki/status?handle=...: the creator's latest gigs + filled/slots.
+2. Deploy the agent with deploy_agent, external_ref "real-agent", name "REAL". System prompt: "You are REAL. Creators text you a short video (or a link to one) to test on real humans before posting. Ask only for what's missing (title, how many reactions 3–20 at 50¢ default). Call the create-gig tool with the video URL, then send the Whop pay link if one comes back. When asked 'how did it do?' (or proactively once results land), call the results tool and reply in 2–3 punchy lines with what to fix. Never invent numbers." Tools = the 3 HTTP endpoints above (base URL = the deployment's .convex.site URL from EXPO_PUBLIC_CONVEX_SITE_URL in app/.env.local), with the x-real-secret header from a Keiki secret.
+   - Figure out how the agent receives media attachments on iMessage. If it gets an attachment URL, pass it as videoUrl. If not, accept links to .mp4 files (and say so in the PR).
+3. Test with talk_to_agent end to end: create a gig from a public sample mp4 URL → confirm it appears in api.gigs.feed → ask "how did it do?".
+4. Channel: call list_channel_types. Use the FREE shared iMessage number or Telegram for the demo. DO NOT buy a dedicated line or anything paid; stop and tell Shri if it needs payment.
+5. Proactive text-back (stretch): when a gig reaches all its slots, schedule an action that messages the creator through Keiki's agent API (x-conversation-id = handle), if the free plan allows it.
+Run `cd app && npx convex dev --once` (deploys must succeed) and `npx tsc --noEmit`. Commit, push, open a PR. In the PR description, include the agent's name and how to text it.
+```
+
 ## Lane D: Backend, money, AI (**Vishnu, Claude Code**), files: `convex/**`
 ```
 Read AGENTS.md and docs/TASKS.md. You own convex/. Keep the API contract stable (add, don't rename).
 1. WHOP (core, track prize): creator pays before a gig goes live. Action api.payments.checkout({gigId}) creates a Whop sandbox checkout for slots*priceCents (+ platform fee), returns the URL; the app opens it with expo-web-browser. A Convex HTTP action /whop/webhook verifies WHOP_WEBHOOK_SECRET and calls gigs.publish({gigId, paid:true, whopCheckoutId}). Reactor cash-out: api.payments.cashout({userId}) (sandbox payout, or record a pending payout and zero the balance). Keys: npx convex env set WHOP_API_KEY / WHOP_WEBHOOK_SECRET.
 2. AI REPORT (OPENAI_API_KEY, Responses API, gpt-6-luna): action api.report.forGig({gigId}) turns reactions.results into 3 bullets ("Laughs spike at 0:04, cut 0:00–0:02, the ending loses people"). Store it on the gig (optional field) so the creator screen shows it.
-3. SUPERMEMORY (SUPERMEMORY_API_KEY, v5, namespace user_<id>): after each valid reaction add a memory ("NAME laughed at a 20s skit about roommates"); later rank gigs.feed by reactor taste → "matched to reactors who like this humor."
+3. (OPTIONAL, no prize) SUPERMEMORY: after each valid reaction add a memory; rank gigs.feed by reactor taste. Only after 1, 2 and the Keiki support below.
+5. KEIKI SUPPORT: make api.payments.checkout callable from Codex's convex/keiki.ts (export an internal version, e.g. internal.payments.createCheckout({gigId}) → {url}) so the iMessage agent can text the Whop pay link. Coordinate with Codex on convex/http.ts: you add /whop/webhook, Codex adds /keiki/*.
 4. Seed: an internal mutation that seeds 2 demo users + 1 demo gig for the stage.
 ```
 
