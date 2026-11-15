@@ -20,8 +20,13 @@ EXPO_PUBLIC_CONVEX_URL=
 |---|---|---|
 | `OPENAI_API_KEY` | AI host (Responses API, `gpt-6-luna`) | ✅ |
 | `SUPERMEMORY_API_KEY` | humor memory / graph / host picks | ✅ (track) |
-| `WHOP_API_KEY` | Pity Tax checkout (sandbox) | only if Whop has a prize |
-| `WHOP_WEBHOOK_SECRET` | verify Whop webhooks in a Convex HTTP action | only with Whop |
+| `WHOP_API_KEY` | Whop sandbox: checkout, UGC funding, student cash-out transfers | ✅ |
+| `WHOP_COMPANY_ID` | the `biz_…` company that receives payments and sends cash-outs | ✅ |
+| `WHOP_API_BASE` | override the Whop API (defaults to `https://sandbox-api.whop.com/api/v1`) | no |
+| `WHOP_WEBHOOK_SECRET` | verify Whop webhooks in a Convex HTTP action | ✅ |
+| `GMAIL_USER` / `GMAIL_APP_PASSWORD` | send `.edu` codes to any inbox (Gmail SMTP, 16-char app password) | ✅ for real codes |
+| `RESEND_API_KEY` / `RESEND_FROM` | fallback email sender; only reaches any inbox with a verified domain in `RESEND_FROM` | no |
+| `DEMO_PASS` | judges' demo pass instead of a `.edu` (defaults to `yc2026`) | no |
 | `KEIKI_API_KEY` | text-the-host over iMessage | only if the event plan unlocks the gateway (see below) |
 
 Supermemory key from the Keychain (no typing):
