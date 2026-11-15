@@ -39,7 +39,7 @@ test:
         - type: validation
           step_description: The React tab shows paid gigs with a price and spots left.
         - type: instructions
-          step_description: 'On the gig titled "Demo: is this funny?", tap "Watch clip".'
+          step_description: Tap the "Watch clip · earn" button on the first paid reaction card.
         - type: validation
           step_description: The watch screen shows the clip title, a video area and a small selfie/camera preview.
         - type: instructions
