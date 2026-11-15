@@ -1,11 +1,12 @@
 import { useAction, useQuery } from 'convex/react';
 import { ConvexError } from 'convex/values';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import type { ComponentRef } from 'react';
 import { Alert, ScrollView, TextInput, View } from 'react-native';
 
 import { api } from '../../convex/_generated/api';
 import { useSession } from '@/lib/session';
-import { Badge, Body, Button, Card, EmptyState, Money, Muted, Screen, Stat, Title, VerifiedStudentBadge, tokens } from '@/ui';
+import { Badge, Body, Button, Card, EmptyState, Money, Muted, Screen, SectionHeader, Stat, Title, VerifiedStudentBadge, tokens } from '@/ui';
 
 const PAYOUT = {
   paid: { label: 'Paid to your Whop', tone: 'good' },
@@ -66,6 +67,7 @@ export default function WalletScreen() {
   const [busy, setBusy] = useState(false);
   const [whopName, setWhopName] = useState('');
   const [linking, setLinking] = useState(false);
+  const whopInput = useRef<ComponentRef<typeof TextInput> | null>(null);
 
   if (!wallet) {
     return (
@@ -81,49 +83,18 @@ export default function WalletScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={{ gap: 14, paddingBottom: 120 }}>
-        <Title>Wallet</Title>
+      <ScrollView contentContainerStyle={{ gap: tokens.space.xl, paddingBottom: 120 }}>
+        <View style={{ gap: tokens.space.xs }}><Muted>YOUR EARNINGS</Muted><Title style={{ fontSize: 36 }}>Wallet</Title></View>
         {wallet.verifiedStudent ? <VerifiedStudentBadge school={wallet.school} /> : null}
 
-        {taste ? (
-          <Card style={{ gap: tokens.space.sm }}>
-            <Body>Your taste</Body>
-            <Muted>{tasteSummary(taste.liked, taste.disliked, taste.signals)}</Muted>
-            {taste.liked.length > 0 ? (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space.xs }}>
-                {taste.liked.map((t) => (
-                  <Badge key={t.tag} tone="good">
-                    {t.tag} · {t.w}
-                  </Badge>
-                ))}
-              </View>
-            ) : null}
-            {taste.disliked.length > 0 ? (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space.xs }}>
-                {taste.disliked.map((t) => (
-                  <Badge key={t.tag} tone="bad">
-                    not {t.tag} · {t.w}
-                  </Badge>
-                ))}
-              </View>
-            ) : null}
-            {!taste.liked.length && !taste.disliked.length ? (
-              <Muted>{taste.signals}/{taste.unlockAt} signals toward UGC unlock</Muted>
-            ) : (
-              <Muted>{taste.signals} swipes & reactions shaping this</Muted>
-            )}
-          </Card>
-        ) : null}
-
-        <Card style={{ gap: 10 }}>
-          <Muted>Balance</Muted>
+        <Card style={{ gap: tokens.space.md, paddingVertical: tokens.space.xl }}>
+          <SectionHeader title="Available balance" detail={`${valid.length} VERIFIED REACTIONS`} />
           <Money cents={wallet.balanceCents} size="lg" />
-          <Badge tone="good">✓ {valid.length} verified reactions</Badge>
           {wallet.whopUsername ? <Muted>Cash-outs go to Whop @{wallet.whopUsername}</Muted> : <>
             <Muted>Link your Whop account to get cash-outs instantly. Without it, cash-outs wait as pending.</Muted>
-            <TextInput accessibilityLabel="Whop username" placeholder="Whop username" placeholderTextColor={tokens.muted} value={whopName} onChangeText={setWhopName}
+            <TextInput ref={whopInput} returnKeyType="done" onSubmitEditing={() => whopInput.current?.blur()} accessibilityLabel="Whop username" placeholder="Whop username" placeholderTextColor={tokens.muted} value={whopName} onChangeText={setWhopName}
               autoCapitalize="none" autoCorrect={false}
-              style={{ color: tokens.text, borderColor: tokens.cardBorder, borderWidth: 1, borderRadius: tokens.radiusSm, padding: tokens.space.md, fontSize: tokens.type.body }} />
+              style={{ color: tokens.text, backgroundColor: tokens.cardRaised, borderColor: tokens.cardBorder, borderWidth: 1, borderRadius: tokens.radiusSm, padding: tokens.space.md, fontSize: tokens.type.body }} />
             <Button label={linking ? 'Linking…' : 'Link Whop account'} variant="secondary" disabled={linking || !whopName.trim() || !userId} onPress={async () => {
               if (!userId) return;
               setLinking(true);
@@ -152,8 +123,19 @@ export default function WalletScreen() {
           />
         </Card>
 
-        <Card style={{ gap: 6 }}>
-          <Stat value={streak > 0 ? `🔥 ${streak}` : '0'} label={streak === 1 ? 'day streak' : 'day streak'} />
+        {taste ? (
+          <Card style={{ gap: tokens.space.md }}>
+            <SectionHeader title="Your taste" detail={`${taste.signals} SIGNALS`} />
+            <Body>{tasteSummary(taste.liked, taste.disliked, taste.signals)}</Body>
+            {taste.liked.length > 0 && <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space.xs }}>{taste.liked.map((t) => <Badge key={t.tag} tone="good">{t.tag} · {t.w}</Badge>)}</View>}
+            {taste.disliked.length > 0 && <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space.xs }}>{taste.disliked.map((t) => <Badge key={t.tag} tone="bad">not {t.tag} · {t.w}</Badge>)}</View>}
+            {!taste.liked.length && !taste.disliked.length ? <Muted>{taste.signals}/{taste.unlockAt} signals toward UGC unlock</Muted> : <Muted>Your reactions shape the clips and paid UGC you see.</Muted>}
+          </Card>
+        ) : null}
+
+        <Card style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space.lg }}>
+          <Stat value={streak > 0 ? String(streak) : '0'} label="DAY STREAK" />
+          <View style={{ flex: 1, gap: tokens.space.xs }}>
           <Body>
             {streak === 0
               ? 'Start a streak: react to a clip today.'
@@ -161,15 +143,16 @@ export default function WalletScreen() {
                 ? 'Nice, today counts. Come back tomorrow to keep it going.'
                 : 'React today to keep your streak alive.'}
           </Body>
+          </View>
         </Card>
 
-        <Title>History</Title>
+        <SectionHeader title="Activity" detail={`${wallet.items.length} RECENT`} />
         {wallet.items.length === 0 ? (
           <EmptyState title="No reactions yet" body="No earnings yet: watch a clip on React. You get paid for attention, laugh or not." />
         ) : (
           wallet.items.map((i) => (
-            <Card key={i.id} style={{ gap: 4 }}>
-              <Body>{i.gigTitle}</Body>
+            <Card key={i.id} style={{ gap: tokens.space.sm }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: tokens.space.md, alignItems: 'flex-start' }}><Body style={{ flex: 1 }}>{i.gigTitle}</Body><Muted>{ago(i.at)}</Muted></View>
               {i.kind === 'payout' && i.payoutStatus ? (
                 <Badge tone={PAYOUT[i.payoutStatus].tone}>{`−${(-i.earnedCents / 100).toFixed(2)} · ${PAYOUT[i.payoutStatus].label}`}</Badge>
               ) : i.kind === 'ugc' ? (
@@ -179,7 +162,6 @@ export default function WalletScreen() {
               ) : (
                 <Badge tone="bad">Not paid: face out of frame</Badge>
               )}
-              <Muted>{ago(i.at)}</Muted>
             </Card>
           ))
         )}

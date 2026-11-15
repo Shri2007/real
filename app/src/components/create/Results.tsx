@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useAction, useMutation, useQuery } from 'convex/react';
-import { Avatar, Badge, Body, Button, Card, Muted, Title, VerifiedStudentBadge, tokens } from '@/ui';
+import { Avatar, Badge, Body, Button, Card, Muted, SectionHeader, Title, VerifiedStudentBadge, tokens } from '@/ui';
 import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
 import { ClipPlayer } from './ClipPlayer';
@@ -25,7 +25,7 @@ function ResultsContent({ gigId, label }: { gigId: Id<'gigs'>; label?: string })
   const [duration, setDuration] = useState(0);
   if (gig === undefined || results === undefined) return <Muted>Loading test…</Muted>;
   if (!gig) return <Muted>Test not found.</Muted>;
-  const series = [{ key: gigId, color: label === 'B' ? tokens.live : tokens.accent, points: results.curve }];
+  const series = [{ key: gigId, color: label === 'B' ? tokens.muted : tokens.accent, points: results.curve }];
   const drops = dropOffs(results.curve);
   const publishDraft = async () => {
     if (lock.current || !validDuration(duration)) return;
@@ -36,12 +36,20 @@ function ResultsContent({ gigId, label }: { gigId: Id<'gigs'>; label?: string })
     catch { setError('Could not publish this draft. Try again.'); }
     finally { lock.current = false; setBusy(false); }
   };
-  return <Card style={{ gap: tokens.space.md }}>
-    <Title>{label ? `Cut ${label}: ` : ''}{gig.title}</Title>
-    <Badge tone={gig.status === 'live' ? 'live' : 'muted'}>{gig.status} · {gig.filled}/{gig.slots} filled</Badge>
-    {!!gig.question && <Body>{gig.question}</Body>}
-    <Body>{results.laughedCount} of {results.count} valid reactors actually laughed</Body>
-    <Body>{results.verifiedStudentCount} verified students reacted</Body>
+  return <Card style={{ gap: tokens.space.lg }}>
+    <View style={{ gap: tokens.space.sm }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: tokens.space.sm }}>
+        <Badge tone={gig.status === 'live' ? 'live' : 'muted'}>{gig.status.toUpperCase()} · {gig.filled}/{gig.slots}</Badge>
+        {label && <Muted>CUT {label}</Muted>}
+      </View>
+      <Title>{gig.title}</Title>
+      {!!gig.question && <Body>{gig.question}</Body>}
+    </View>
+    <Card style={{ flexDirection: 'row', gap: tokens.space.sm, padding: tokens.space.md, backgroundColor: tokens.cardRaised }}>
+      <View style={{ flex: 1, gap: 3 }}><Title style={{ fontSize: 27 }}>{results.laughedCount}<Muted>/{results.count}</Muted></Title><Muted>ACTUALLY LAUGHED</Muted></View>
+      <View style={{ flex: 1, gap: 3 }}><Title style={{ fontSize: 27 }}>{results.count ? Math.round(results.laughedCount / results.count * 100) : 0}%</Title><Muted>LAUGH RATE</Muted></View>
+      <View style={{ flex: 1, gap: 3 }}><Title style={{ fontSize: 27 }}>{results.verifiedStudentCount}</Title><Muted>VERIFIED</Muted></View>
+    </Card>
     <Muted>Only valid completed reactions are included. This is not attention or retention data.</Muted>
     {!results.count && <Body>Waiting for reactions. No measured curve yet.</Body>}
     {gig.videoUrl ? <ClipPlayer key={gig.videoUrl} uri={gig.videoUrl} onDuration={setDuration} series={series} durationSec={(gig.durationMs ?? 0) / 1000} peakSec={results.peakSec} drops={drops} /> : <>
@@ -70,8 +78,9 @@ function AiReport({ gigId, report }: { gigId: Id<'gigs'>; report?: string[] }) {
   const write = useAction(api.report.forGig);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  return <Card style={{ gap: tokens.space.sm }}>
-    <Body>What to fix</Body>
+  return <Card style={{ gap: tokens.space.md, borderColor: tokens.accent, borderWidth: 1 }}>
+    <Badge tone="good">CREATOR TAKEAWAY</Badge>
+    <SectionHeader title="What to fix" />
     {report?.length ? report.map((b) => <Body key={b}>• {b}</Body>) : <Muted>No AI report yet. It's written automatically when every slot fills.</Muted>}
     {!!error && <Body>{error}</Body>}
     <Button label={busy ? 'Writing report…' : report?.length ? 'Rewrite AI report' : 'Write AI report now'} variant="secondary" disabled={busy} onPress={async () => {
@@ -88,17 +97,20 @@ function WhatPeopleSaid({ gigId }: { gigId: Id<'gigs'> }) {
   const counts = new Map<string, number>();
   for (const q of quotes) for (const t of q.tags) counts.set(t, (counts.get(t) ?? 0) + 1);
   const topTags = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
-  return <Card style={{ gap: tokens.space.sm }}>
-    <Body>What people said</Body>
+  return <View style={{ gap: tokens.space.md }}>
+    <SectionHeader title="What people said" detail={`${quotes.length} VOICE NOTES`} />
     {topTags.length > 0 && <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space.xs }}>
       {topTags.map(([tag, n]) => <Badge key={tag} tone="live">{tag} ×{n}</Badge>)}
     </View>}
-    {quotes.map((q) => <View key={q.reactionId} style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space.sm, flexWrap: 'wrap' }}>
-      <Avatar name={q.name} color={q.color} size={32} />
-      <Body style={{ flex: 1 }}>“{q.whyQuote}”</Body>
-      {q.sentiment && <Badge tone={q.sentiment === 'pos' ? 'good' : q.sentiment === 'neg' ? 'bad' : 'muted'}>{q.sentiment === 'pos' ? 'Liked it' : q.sentiment === 'neg' ? 'Not for them' : 'Mixed'}</Badge>}
-    </View>)}
-  </Card>;
+    {quotes.map((q) => <Card key={q.reactionId} style={{ gap: tokens.space.sm }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space.sm }}>
+        <Avatar name={q.name} color={q.color} size={36} />
+        <Body>{q.name}</Body>
+        {q.sentiment && <Badge tone={q.sentiment === 'pos' ? 'good' : q.sentiment === 'neg' ? 'bad' : 'muted'}>{q.sentiment === 'pos' ? 'Liked it' : q.sentiment === 'neg' ? 'Not for them' : 'Mixed'}</Badge>}
+      </View>
+      <Body>“{q.whyQuote}”</Body>
+    </Card>)}
+  </View>;
 }
 
 export function Comparison({ a, b }: { a: Id<'gigs'>; b: Id<'gigs'> }) {
@@ -112,8 +124,8 @@ export function Comparison({ a, b }: { a: Id<'gigs'>; b: Id<'gigs'> }) {
   return <>
     <Card style={{ gap: tokens.space.md }}>
       <Title>A/B comparison</Title><Body>{verdict.headline}</Body><Muted>{verdict.detail}</Muted>
-      <Body>A (green): {ga.title}</Body><Body>B (blue): {gb.title}</Body>
-      <ReactionCurve series={[{ key: a, color: tokens.accent, points: ra.curve }, { key: b, color: tokens.live, points: rb.curve }]} durationSec={Math.max(ga.durationMs ?? 0, gb.durationMs ?? 0) / 1000} />
+      <Body style={{ color: tokens.accent }}>A · {ga.title}</Body><Body style={{ color: tokens.muted }}>B · {gb.title}</Body>
+      <ReactionCurve series={[{ key: a, color: tokens.accent, points: ra.curve }, { key: b, color: tokens.muted, points: rb.curve }]} durationSec={Math.max(ga.durationMs ?? 0, gb.durationMs ?? 0) / 1000} />
       <Muted>Provisional comparison of separate tests, not randomized audiences. The first whole-second average at or above 0.45 is aggregate onset, not the first person’s laugh. Sample weighting, different audiences, and small counts can change the result. Use each cut’s curve below to seek its video.</Muted>
     </Card>
     <Results key={a} gigId={a} label="A" /><Results key={b} gigId={b} label="B" />

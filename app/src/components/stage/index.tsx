@@ -4,7 +4,7 @@ import { useFocusEffect } from 'expo-router';
 import { useEventListener } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useQuery } from 'convex/react';
-import { Avatar, Badge, Body, Button, Card, Money, Muted, Screen, Stat, Title, VerifiedStudentBadge, tokens } from '@/ui';
+import { Avatar, Badge, Body, Button, Card, Money, Muted, Screen, Stat, Title, VerifiedStudentBadge, VideoFrame, tokens } from '@/ui';
 import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
 import { StageCurve } from './StageCurve';
@@ -85,7 +85,7 @@ export function Stage({ gigId, onClose }: { gigId: Id<'gigs'>; onClose: () => vo
       <Screen>
         <ScrollView contentContainerStyle={mediaLayout.content}>
           <View style={mediaLayout.row}>
-            <Title>{gig?.title ?? 'REAL · Live reactions'}</Title>
+            <View style={{ flex: 1, gap: 2 }}><Muted>REAL · LIVE REACTION ROOM</Muted><Title>{gig?.title ?? 'Live reactions'}</Title></View>
             <Button label="Close" variant="secondary" onPress={onClose} />
             <Button label="Replay" variant="secondary" onPress={() => setReplay(n => n + 1)} />
             {Platform.OS === 'web' && <Button label="Fullscreen" variant="secondary" onPress={() => void fullscreen()} />}
@@ -198,7 +198,7 @@ function StageMedia({ uri, replay, onTime, onDuration }: { uri: string | null; r
     };
   }, [player]);
   return <>
-    {uri ? <VideoView player={player} nativeControls={false} contentFit="contain" style={mediaLayout.video} /> : <Muted>Video unavailable. Live results are still shown.</Muted>}
+    {uri ? <VideoFrame><VideoView player={player} nativeControls={false} contentFit="contain" style={mediaLayout.video} /></VideoFrame> : <Muted>Video unavailable. Live results are still shown.</Muted>}
     {error && <Muted>Video could not load. Check the connection; live results remain available.</Muted>}
     {Platform.OS === 'web' && !!uri && <Button variant="secondary" label={muted ? 'Unmute video' : 'Mute video'} onPress={() => { player.muted = !muted; setMuted(!muted); player.play(); }} />}
   </>;

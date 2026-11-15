@@ -3,7 +3,7 @@ import { AppState, View } from 'react-native';
 import { useEventListener } from 'expo';
 import { useFocusEffect } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { Button, Muted, tokens } from '@/ui';
+import { Button, Muted, VideoFrame, tokens } from '@/ui';
 import { CurveSeries, ReactionCurve } from './ReactionCurve';
 import { fmtTime } from './curve';
 
@@ -33,7 +33,7 @@ export function ClipPlayer({ uri, onDuration, series, durationSec = 0, peakSec, 
     setTime(target);
   };
   return <View style={{ gap: tokens.space.md }}>
-    <VideoView player={player} nativeControls contentFit="contain" style={{ width: '100%', aspectRatio: 16 / 9 }} />
+    <VideoFrame><VideoView player={player} nativeControls contentFit="contain" style={{ width: '100%', aspectRatio: 16 / 9 }} /></VideoFrame>
     {error && <Muted>Video could not load. Check your connection or choose another clip.</Muted>}
     {series && <>
       <Muted>Tap the curve to seek · playhead {fmtTime(time)}</Muted>
