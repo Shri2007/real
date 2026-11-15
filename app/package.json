@@ -39,7 +39,16 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "convex": "convex dev",
+    "phone": "expo start",
+    "phone:tunnel": "expo start --tunnel",
+    "env:list": "convex env list",
+    "env:keys": "convex env set SUPERMEMORY_API_KEY \"$(security find-generic-password -s supermemory-open-mic -w)\" && convex env set KEIKI_API_KEY \"$(security find-generic-password -s keiki-open-mic -w)\"",
+    "revyl:dev": "revyl dev --platform ios",
+    "revyl:build": "revyl build --profile preview --platform ios --remote",
+    "revyl:device": "revyl device start --app-id 16509778-8ac8-49f1-9538-58b58c26ddda --open",
+    "revyl:status": "revyl github status && revyl config validate"
   },
   "private": true
 }
