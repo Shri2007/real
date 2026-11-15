@@ -44,13 +44,18 @@ export default function ForYouScreen() {
       <Button label="My UGC" variant={tab === 'mine' ? 'primary' : 'secondary'} onPress={() => setTab('mine')} style={{ flex: 1 }} />
     </View>
     {tab === 'mine' ? <MyUgc userId={userId} /> : <>
-      {taste && taste.swipes > 0 ? <View style={{ gap: tokens.space.xs }}>
-        <Muted>Your taste so far · {taste.swipes} swipes</Muted>
+      {taste && (taste.liked.length > 0 || taste.disliked.length > 0) ? <View style={{ gap: tokens.space.xs }}>
+        <Muted>Your taste so far · {taste.signals} swipes & reactions</Muted>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space.xs }}>
           {taste.liked.map((t) => <Badge key={t} tone="good">{t}</Badge>)}
           {taste.disliked.map((t) => <Badge key={t} tone="bad">not {t}</Badge>)}
         </View>
       </View> : <Body>Swipe right on what you'd watch or make, left on what you wouldn't. The feed learns as you go.</Body>}
+      {taste && (taste.signals < taste.unlockAt
+        ? <Muted>🔒 Swipe {taste.unlockAt - taste.signals} more to unlock paid UGC jobs picked for your taste</Muted>
+        : taste.ugcMatches > 0
+          ? <Badge tone="live">🎯 {taste.ugcMatches} paid UGC {taste.ugcMatches === 1 ? 'job' : 'jobs'} matched to your taste</Badge>
+          : <Muted>No UGC jobs match your taste right now. Keep swiping.</Muted>)}
       {feed === undefined ? <Muted>Loading your feed…</Muted> : !top ? <EmptyState title="You're all caught up" body="New clips and UGC opportunities land here as brands post them." /> : <>
         <FeedCard
           key={top.id}

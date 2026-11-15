@@ -48,7 +48,40 @@ const UGC = [
   { brand: 1, gig: 3, brief: "Get ready with me using the GlowLab serum. Say honestly how your skin feels after.", payoutCents: 4000, spots: 2 },
   { brand: 2, gig: 4, brief: "Order the $6 dorm bowl and give a 20s honest first-bite review.", payoutCents: 2000, spots: 4 },
   { brand: 3, gig: 6, brief: "Show your finals-week study setup and how you'd use StudyPal.", payoutCents: 3000, spots: 3 },
+  { brand: 4, gig: 7, brief: "Style two Threadbare thrift pieces into one fit and show the try-on.", payoutCents: 3500, spots: 3 },
+  { brand: 5, gig: 8, brief: "Make a 20s beat in LoopBeats and show the before/after.", payoutCents: 3000, spots: 3 },
+  { brand: 6, gig: 9, brief: "Film your pet meeting a PawPals toy for the first time.", payoutCents: 2500, spots: 4 },
+  { brand: 7, gig: 10, brief: "Play Pixel Arcade for 30s and react to your first win.", payoutCents: 3000, spots: 3 },
+  { brand: 0, gig: 1, brief: "Finals-week skit: your 2am study crash, saved by a Volt.", payoutCents: 3500, spots: 2 },
+  { brand: 1, gig: 2, brief: "Honest 7-day GlowLab check-in: day 1 vs day 7 skin.", payoutCents: 5000, spots: 2 },
+  { brand: 2, gig: 5, brief: "Prank your roommate with a Campus Bites late-night delivery.", payoutCents: 3000, spots: 2 },
+  { brand: 0, gig: 11, brief: "Road-trip GoPro moment with a Volt in the cupholder.", payoutCents: 4000, spots: 2 },
 ];
+
+// Adds any UGC jobs from the list above that a seeded database doesn't have yet (safe to rerun).
+export const moreUgc = internalMutation({
+  args: {},
+  returns: v.number(),
+  handler: async (ctx) => {
+    const brands = await Promise.all(BRANDS.map((b) => ctx.db.query("users").withIndex("by_handle", (q) => q.eq("handle", b.handle)).unique()));
+    if (!brands[0]) throw new Error("Run seed:demo first");
+    const gigs = await ctx.db.query("gigs").withIndex("by_status", (q) => q.eq("status", "live")).take(500);
+    let added = 0;
+    for (const u of UGC) {
+      const gig = gigs.find((g) => g.title === GIGS[u.gig].title);
+      const brandId = gig?.creatorId ?? brands[u.brand]?._id;
+      if (!brandId) continue;
+      const existing = await ctx.db.query("ugcOpps").withIndex("by_gigId", (q) => q.eq("gigId", gig?._id)).take(20);
+      if (existing.some((o) => o.brief === u.brief)) continue;
+      await ctx.db.insert("ugcOpps", {
+        brandId, gigId: gig?._id, title: `Make a video for ${BRANDS[u.brand].name}`, brief: u.brief,
+        payoutCents: u.payoutCents, spots: u.spots, claimed: 0, status: "open", funded: true, tags: GIGS[u.gig].tags,
+      });
+      added++;
+    }
+    return added;
+  },
+});
 
 const REACTORS = [
   { name: "Maya", color: "#2EE59A", school: "Berkeley", taste: "gym", laugh: [3, 4, 5], why: "the alarm bit got me, I'd grab a can", sentiment: "pos" as const, tags: ["funny opening", "relatable"] },

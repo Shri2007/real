@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalAction, internalMutation, mutation, query, MutationCtx } from "./_generated/server";
+import { internalAction, internalMutation, mutation, query, MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
 
@@ -149,85 +149,116 @@ const feedItem = v.object({
   reason: v.string(),
 });
 
-// For you: clips to react to (paid) + UGC opportunities to claim, ranked by taste with every 4th card exploring.
+// UGC jobs unlock once the engine has learned something from you, then only jobs that match your taste show.
+export const UGC_UNLOCK_SIGNALS = 5;
+
+type Weights = Map<string, number>;
+const scoreTags = (weights: Weights, tags: string[] = []) => {
+  let s = 0;
+  const liked: string[] = [];
+  for (const tag of tags) {
+    const w = weights.get(tag) ?? 0;
+    s += w;
+    if (w > 0) liked.push(tag);
+  }
+  liked.sort((x, y) => (weights.get(y) ?? 0) - (weights.get(x) ?? 0));
+  return { s, liked };
+};
+
+async function studentState(ctx: QueryCtx, userId: Id<"users">) {
+  const user = await ctx.db.get(userId);
+  const weights: Weights = new Map((user?.taste ?? []).map((t) => [t.tag, t.w]));
+  const swiped = await ctx.db.query("swipes").withIndex("by_userId_and_item", (q) => q.eq("userId", userId)).take(1000);
+  const reacted = await ctx.db.query("reactions").withIndex("by_reactorId", (q) => q.eq("reactorId", userId)).take(1000);
+  const claims = await ctx.db.query("ugcClaims").withIndex("by_userId", (q) => q.eq("userId", userId)).take(200);
+  const seenGigs = new Set<string>([...swiped.map((s) => s.gigId), ...reacted.map((r) => r.gigId)].filter((x): x is Id<"gigs"> => !!x));
+  const seenOpps = new Set<string>([...swiped.map((s) => s.oppId), ...claims.map((c) => c.oppId)].filter((x): x is Id<"ugcOpps"> => !!x));
+  const signals = swiped.length + reacted.length;
+  const unlocked = signals >= UGC_UNLOCK_SIGNALS;
+  const opps = unlocked ? await ctx.db.query("ugcOpps").withIndex("by_status", (q) => q.eq("status", "open")).order("desc").take(100) : [];
+  const matchedOpps = opps
+    .filter((o) => o.brandId !== userId && !seenOpps.has(o._id) && o.claimed < o.spots)
+    .map((o) => ({ opp: o, ...scoreTags(weights, o.tags) }))
+    .filter((m) => m.s > 0)
+    .sort((x, y) => y.s - x.s);
+  return { user, weights, seenGigs, signals, unlocked, matchedOpps };
+}
+
+const matchPct = (weights: Weights, s: number) => (weights.size ? Math.round(50 + 50 * Math.tanh(s / 3)) : null);
+
+// For you: clips ranked by taste (every 4th explores), and, once unlocked, UGC jobs matched to the student
+// slotted in from the top (1st card, then every 3rd).
 export const feed = query({
   args: { userId: v.id("users") },
   returns: v.array(feedItem),
   handler: async (ctx, { userId }) => {
-    const user = await ctx.db.get(userId);
-    const weights = new Map((user?.taste ?? []).map((t) => [t.tag, t.w]));
-    const swiped = await ctx.db.query("swipes").withIndex("by_userId_and_item", (q) => q.eq("userId", userId)).take(1000);
-    const seenGigs = new Set(swiped.map((s) => s.gigId).filter(Boolean));
-    const seenOpps = new Set(swiped.map((s) => s.oppId).filter(Boolean));
-    const reacted = await ctx.db.query("reactions").withIndex("by_reactorId", (q) => q.eq("reactorId", userId)).take(1000);
-    for (const r of reacted) seenGigs.add(r.gigId);
-    const claims = await ctx.db.query("ugcClaims").withIndex("by_userId", (q) => q.eq("userId", userId)).take(200);
-    for (const c of claims) seenOpps.add(c.oppId);
-
-    const score = (tags: string[] = []) => {
-      let s = 0;
-      let best: { tag: string; w: number } | null = null;
-      for (const tag of tags) {
-        const w = weights.get(tag) ?? 0;
-        s += w;
-        if (w > 0 && (!best || w > best.w)) best = { tag, w };
-      }
-      return { s, best };
-    };
+    const { weights, seenGigs, matchedOpps } = await studentState(ctx, userId);
     const name = async (id: Id<"users">) => (await ctx.db.get(id))?.name ?? "?";
 
     type Item = typeof feedItem.type & { s: number };
-    const items: Item[] = [];
+    const clips: Item[] = [];
     const gigs = await ctx.db.query("gigs").withIndex("by_status", (q) => q.eq("status", "live")).order("desc").take(100);
     for (const g of gigs) {
       if (g.creatorId === userId || seenGigs.has(g._id) || g.filled >= g.slots) continue;
-      const { s, best } = score(g.tags);
-      items.push({
+      const { s, liked } = scoreTags(weights, g.tags);
+      clips.push({
         kind: "clip", id: g._id, gigId: g._id, title: g.title, byName: await name(g.creatorId), body: g.question,
         tags: g.tags ?? [], cents: g.priceCents, spotsLeft: g.slots - g.filled,
         videoUrl: await ctx.storage.getUrl(g.videoStorageId),
-        matchPct: weights.size ? Math.round(50 + 50 * Math.tanh(s / 3)) : null,
-        reason: best ? `Because you liked ${best.tag}` : "New for you", s,
+        matchPct: matchPct(weights, s),
+        reason: liked.length ? `Because you liked ${liked[0]}` : "New for you", s,
       });
     }
-    const opps = await ctx.db.query("ugcOpps").withIndex("by_status", (q) => q.eq("status", "open")).order("desc").take(50);
-    for (const o of opps) {
-      if (o.brandId === userId || seenOpps.has(o._id)) continue;
-      const { s, best } = score(o.tags);
+    const ranked = [...clips].sort((a, b) => b.s - a.s);
+    const explore = [...clips].sort((a, b) => a.s - b.s);
+    const orderedClips: (typeof feedItem.type)[] = [];
+    const used = new Set<string>();
+    while (orderedClips.length < clips.length) {
+      const exploring = orderedClips.length % 4 === 3;
+      const next = (exploring ? explore : ranked).find((i) => !used.has(i.id))!;
+      used.add(next.id);
+      const { s: _s, ...rest } = next;
+      orderedClips.push(exploring && weights.size ? { ...rest, reason: "Something different" } : rest);
+    }
+
+    const ugc: (typeof feedItem.type)[] = [];
+    for (const { opp: o, s, liked } of matchedOpps) {
       const gig = o.gigId ? await ctx.db.get(o.gigId) : null;
-      items.push({
+      ugc.push({
         kind: "ugc", id: o._id, oppId: o._id, gigId: o.gigId, title: o.title, byName: await name(o.brandId), body: o.brief,
         tags: o.tags ?? [], cents: o.payoutCents, spotsLeft: o.spots - o.claimed,
         videoUrl: gig ? await ctx.storage.getUrl(gig.videoStorageId) : null,
-        matchPct: weights.size ? Math.round(50 + 50 * Math.tanh(s / 3)) : null,
-        reason: best ? `Make content about ${best.tag}, which you're into` : "Paid UGC: pick it if it's your thing", s: s + 0.5,
+        matchPct: matchPct(weights, s),
+        reason: `Picked for you: you're into ${liked.slice(0, 2).join(" + ")}`,
       });
     }
-    const ranked = [...items].sort((a, b) => b.s - a.s);
-    const explore = [...items].sort((a, b) => a.s - b.s);
-    const out: Item[] = [];
-    const used = new Set<string>();
-    while (out.length < items.length) {
-      const pool = out.length % 4 === 3 ? explore : ranked;
-      const next = pool.find((i) => !used.has(i.id))!;
-      used.add(next.id);
-      out.push(out.length % 4 === 3 && weights.size ? { ...next, reason: "Something different" } : next);
+    const out: (typeof feedItem.type)[] = [];
+    while (orderedClips.length || ugc.length) {
+      const next = out.length % 3 === 0 && ugc.length ? ugc.shift()! : orderedClips.shift() ?? ugc.shift()!;
+      out.push(next);
     }
-    return out.slice(0, 30).map(({ s: _s, ...rest }) => rest);
+    return out.slice(0, 30);
   },
 });
 
 export const taste = query({
   args: { userId: v.id("users") },
-  returns: v.object({ liked: v.array(v.string()), disliked: v.array(v.string()), swipes: v.number() }),
+  returns: v.object({
+    liked: v.array(v.string()),
+    disliked: v.array(v.string()),
+    signals: v.number(),
+    unlockAt: v.number(),
+    ugcMatches: v.number(),
+  }),
   handler: async (ctx, { userId }) => {
-    const user: Doc<"users"> | null = await ctx.db.get(userId);
-    const t = user?.taste ?? [];
-    const swipes = await ctx.db.query("swipes").withIndex("by_userId_and_item", (q) => q.eq("userId", userId)).take(1000);
+    const { user, signals, matchedOpps } = await studentState(ctx, userId);
+    const t = (user as Doc<"users"> | null)?.taste ?? [];
     return {
       liked: t.filter((x) => x.w > 0).slice(0, 5).map((x) => x.tag),
       disliked: t.filter((x) => x.w < 0).sort((a, b) => a.w - b.w).slice(0, 3).map((x) => x.tag),
-      swipes: swipes.length,
+      signals,
+      unlockAt: UGC_UNLOCK_SIGNALS,
+      ugcMatches: matchedOpps.length,
     };
   },
 });
