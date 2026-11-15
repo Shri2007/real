@@ -17,24 +17,45 @@ test:
         name: OPEN MIC iOS
     blocks:
         - type: validation
-          step_description: The onboarding screen shows the REAL title and a "Your name" text field.
+          step_description: 'The onboarding screen shows the REAL title, "Who are you?", and two buttons: "I''m a student / creator" and "I''m a brand / company".'
         - type: instructions
-          step_description: Tap the "Your name" field and type "Revyl Tester".
+          step_description: 'Tap "I''m a student / creator".'
+        - type: instructions
+          step_description: 'Tap the "Your name" field and type "Revyl Tester". Leave the school email empty.'
         - type: instructions
           step_description: Tap the Continue button.
         - type: validation
-          step_description: The React tab is visible with a list of paid gigs, each showing a price and spots left.
+          step_description: 'The "Verify you''re a student" screen is shown with an "Email me a code" button and a "Judging the demo? No .edu needed" button.'
         - type: instructions
-          step_description: 'On the gig titled "Demo: is this funny?", tap "Watch clip".'
+          step_description: 'Tap "Judging the demo? No .edu needed".'
+        - type: instructions
+          step_description: 'Tap the "Demo pass" field, type "yc2026", then tap "Unlock with demo pass".'
+        - type: validation
+          step_description: 'A green badge reading "Verified student · Demo pass" is shown with a Continue button.'
+        - type: instructions
+          step_description: Tap Continue.
+        - type: validation
+          step_description: 'The "What are you into?" screen shows interest chips such as comedy, food and tech.'
+        - type: instructions
+          step_description: 'Tap the "comedy", "food" and "tech" chips, then tap Continue.'
+        - type: validation
+          step_description: The app shows a tab bar with For you, React, Create and Wallet, and the For you feed shows a clip or UGC card.
+        - type: instructions
+          step_description: Tap the React tab.
+        - type: validation
+          step_description: 'The React tab lists paid clips, each with a title, "spots left" and a "Watch clip · earn" button.'
+        - type: instructions
+          step_description: 'On the first clip in the list, tap "Watch clip · earn".'
         - type: validation
           step_description: The watch screen shows the clip title, a video area and a small selfie/camera preview.
         - type: instructions
-          step_description: Wait until the "Start reaction" button is enabled (the face model finishes loading), then tap it.
+          step_description: 'Wait until the "Start reaction" button is enabled (the face model finishes loading), then tap it.'
         - type: instructions
-          step_description: Wait for the 3-2-1 countdown and let the clip play to the end (about 15 seconds). Do not tap anything.
+          step_description: Let the clip play to the end (about 15 to 30 seconds). Do not tap anything.
         - type: validation
-          step_description: A result screen is shown that says either "Paid $0.50" or "Not paid" (the simulator has no camera, so "Not paid" is expected), along with the line "We pay for attention, not applause".
+          step_description: 'A result screen is shown with "YOU EARNED" and either a dollar amount or "Not paid" (the simulator has no camera, so "Not paid" is expected), and the line "We pay for attention, not applause".'
         - type: instructions
-          step_description: Tap "Back to feed".
+          step_description: 'Tap "Back to feed".'
         - type: validation
-          step_description: The React tab gig feed is visible again.
+          step_description: The React tab clip list is visible again.
+
