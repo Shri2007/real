@@ -79,6 +79,22 @@ GOAL: creators text a clip to the REAL agent on iMessage and get verified human 
 Run `cd app && npx convex dev --once` (deploys must succeed) and `npx tsc --noEmit`. Commit, push, open a PR. In the PR description, include the agent's name and how to text it.
 ```
 
+## Lane T: Taste Profile + audience targeting (**Vishnu**, after Whop), files: `app/convex/taste.ts`, optional fields in `schema.ts`, `app/src/components/taste/**`, a "Taste DNA" card on `app/src/app/wallet.tsx` (coordinate with the CAPY-3 wallet PR)
+```
+git checkout main && git pull && git checkout -b lane-t/taste
+Read AGENTS.md, docs/TASKS.md, app/convex/_generated/ai/guidelines.md. SUPERMEMORY_API_KEY and OPENAI_API_KEY are already in Convex env.
+
+GOAL: "Real reactions from the RIGHT people." Every reaction builds a taste profile per reactor; creators target an audience; reactors get a shareable Taste DNA card.
+
+1. MEMORY (Supermemory v5, one namespace per user: user_<userId>, docs https://supermemory.ai/docs/llms.txt): after each VALID reaction (schedule from reactions.submit via ctx.scheduler.runAfter(0, internal.taste.remember, {reactionId})), add a memory like "<name> watched '<gig title>' (<question>): laughed (peak 0.82), watched to end" or "...stayed deadpan." Add an optional `tags: v.optional(v.array(v.string()))` to gigs; when a gig is created, an OpenAI call (OPENAI_API_KEY, Responses API, gpt-6-luna) tags it from title + question with 2–4 tags (e.g. "dry humor", "gym", "skit", "product demo"), and the memory includes those tags.
+2. TASTE DNA: action api.taste.refresh({userId}): search the user's Supermemory namespace + OpenAI → store on the user (optional fields): tasteSummary (e.g. "Dry, deadpan humor; gym + tech; loses interest in long intros") and tasteMix: [{label, pct}] (3–4 slices summing to 100). Query api.taste.get({userId}). Auto-refresh every 3 valid reactions.
+3. TARGETING: optional `audience: v.optional(v.string())` on gigs (free text from the creator, e.g. "Gen-Z who like dry humor"). gigs.feed ranks live gigs for a reactor by match between the gig's tags/audience and the reactor's taste (simple: tag overlap with tasteMix labels via OpenAI embeddings or plain string overlap, with no blocking if there's no profile). Add `matchPct` to each feed item so the reactor sees "92% match".
+4. UI: app/src/components/taste/TasteCard.tsx, a shareable "Taste DNA" card (summary + mix bars) using only @/ui primitives, rendered at the top of the Wallet tab (if CAPY-3's wallet PR is merged, add it there; otherwise render it in wallet.tsx above the placeholder). Add an "Audience" text field to the creator's NewTest (app/src/components/create/NewTest.tsx, passing `audience` to api.gigs.create; add the arg as OPTIONAL).
+5. Keep every new field OPTIONAL and the existing API working. `cd app && npx convex dev --once` and `npx tsc --noEmit` must pass. Open a PR.
+
+PITCH LINE this unlocks: "Real reactions, from the right people, before you post."
+```
+
 ## Lane D: Backend, money, AI (**Vishnu, Claude Code**), files: `convex/**`
 ```
 Read AGENTS.md and docs/TASKS.md. You own convex/. Keep the API contract stable (add, don't rename).
