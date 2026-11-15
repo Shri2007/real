@@ -4,7 +4,7 @@ import { Alert, ScrollView } from 'react-native';
 
 import { api } from '../../convex/_generated/api';
 import { useSession } from '@/lib/session';
-import { Badge, Body, Button, Card, EmptyState, Money, Muted, Screen, Stat, Title } from '@/ui';
+import { Badge, Body, Button, Card, EmptyState, Money, Muted, Screen, Stat, Title, VerifiedStudentBadge } from '@/ui';
 
 const DAY = 24 * 60 * 60 * 1000;
 const dayKey = (ms: number) => {
@@ -58,6 +58,7 @@ export default function WalletScreen() {
     <Screen>
       <ScrollView contentContainerStyle={{ gap: 14, paddingBottom: 120 }}>
         <Title>Wallet</Title>
+        {wallet.verifiedStudent ? <VerifiedStudentBadge school={wallet.school} /> : null}
 
         <Card style={{ gap: 10 }}>
           <Muted>Balance</Muted>
