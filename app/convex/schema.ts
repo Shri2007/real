@@ -11,6 +11,10 @@ export default defineSchema({
     color: v.string(),
     handle: v.optional(v.string()), // Keiki conversation/sender identity
     balanceCents: v.number(), // reactor earnings (demo wallet; Whop handles real payouts)
+    // Optional .edu verification (Lane E) — all additive / optional
+    email: v.optional(v.string()),
+    school: v.optional(v.string()), // derived from domain, e.g. berkeley.edu → Berkeley
+    verifiedStudent: v.optional(v.boolean()),
   }).index("by_handle", ["handle"]),
 
   gigs: defineTable({

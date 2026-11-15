@@ -123,6 +123,21 @@ export function Badge({
   );
 }
 
+/** "✓ Verified student · Berkeley" — only render when the user is .edu-verified. */
+export function VerifiedStudentBadge({
+  school,
+  style,
+}: {
+  school?: string | null;
+  style?: ViewStyle;
+}) {
+  return (
+    <Badge tone="good" style={style}>
+      {school ? `✓ Verified student · ${school}` : '✓ Verified student'}
+    </Badge>
+  );
+}
+
 export function Avatar({
   name,
   color,

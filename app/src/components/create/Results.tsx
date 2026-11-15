@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useMutation, useQuery } from 'convex/react';
-import { Avatar, Badge, Body, Button, Card, Muted, Title, tokens } from '@/ui';
+import { Avatar, Badge, Body, Button, Card, Muted, Title, VerifiedStudentBadge, tokens } from '@/ui';
 import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
 import { ClipPlayer } from './ClipPlayer';
@@ -39,6 +39,7 @@ function ResultsContent({ gigId, label }: { gigId: Id<'gigs'>; label?: string })
     <Badge tone={gig.status === 'live' ? 'live' : 'muted'}>{gig.status} · {gig.filled}/{gig.slots} filled</Badge>
     {!!gig.question && <Body>{gig.question}</Body>}
     <Body>{results.laughedCount} of {results.count} valid reactors actually laughed</Body>
+    <Body>{results.verifiedStudentCount} verified students reacted</Body>
     <Muted>Only valid completed reactions are included. This is not attention or retention data.</Muted>
     {!results.count && <Body>Waiting for reactions. No measured curve yet.</Body>}
     {gig.videoUrl ? <ClipPlayer key={gig.videoUrl} uri={gig.videoUrl} onDuration={setDuration} series={series} durationSec={(gig.durationMs ?? 0) / 1000} peakSec={results.peakSec} drops={drops} /> : <>
@@ -47,7 +48,9 @@ function ResultsContent({ gigId, label }: { gigId: Id<'gigs'>; label?: string })
     </>}
     <Muted>Red markers show laughter drops: the average falls by at least 0.15 after a second at or above 0.45. They do not show attention loss. Timing is whole-second; missing bins are not zero.</Muted>
     {results.reactors.map((reactor, i) => <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space.sm, flexWrap: 'wrap' }}>
-      <Avatar name={reactor.name} color={reactor.color} /><Body>{reactor.name}</Body><Badge tone={reactor.laughed ? 'good' : 'muted'}>{reactor.laughed ? 'Laughed' : 'Stayed deadpan'}</Badge>
+      <Avatar name={reactor.name} color={reactor.color} /><Body>{reactor.name}</Body>
+      {reactor.verifiedStudent ? <VerifiedStudentBadge school={reactor.school} /> : null}
+      <Badge tone={reactor.laughed ? 'good' : 'muted'}>{reactor.laughed ? 'Laughed' : 'Stayed deadpan'}</Badge>
     </View>)}
     {gig.status === 'draft' && <>
       <Muted>Saved draft. Video duration must be verified at 30 seconds or less before publishing.</Muted>

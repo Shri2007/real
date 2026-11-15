@@ -4,7 +4,7 @@ import { useFocusEffect } from 'expo-router';
 import { useEventListener } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useQuery } from 'convex/react';
-import { Avatar, Badge, Body, Button, Card, Money, Muted, Screen, Stat, Title, tokens } from '@/ui';
+import { Avatar, Badge, Body, Button, Card, Money, Muted, Screen, Stat, Title, VerifiedStudentBadge, tokens } from '@/ui';
 import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
 import { StageCurve } from './StageCurve';
@@ -101,6 +101,7 @@ export function Stage({ gigId, onClose }: { gigId: Id<'gigs'>; onClose: () => vo
                 <Card style={mediaLayout.stack}>
                   <Stat value={`${results.count}/${gig.slots}`} label="real humans reacted" />
                   <Stat value={results.laughedCount} label="actually laughed" />
+                  <Stat value={results.verifiedStudentCount} label="verified students reacted" />
                   <Badge>✓ Verified real humans</Badge>
                   <Body>Face in frame ≥70% of the clip · watched to the end · paid the same either way.</Body>
                   <MoneyTicker cents={results.count * gig.priceCents} />
@@ -111,7 +112,7 @@ export function Stage({ gigId, onClose }: { gigId: Id<'gigs'>; onClose: () => vo
                 <Card style={mediaLayout.stack}>
                   <Title>The humans behind the curve</Title>
                   {!results.count && <Muted>Waiting for real humans. New reactions appear live.</Muted>}
-                  {results.reactors.map((reactor, index) => <Reactor key={`${index}-${reactor.name}-${reactor.color}`} {...reactor} />)}
+                  {results.reactors.map((reactor, index) => <Reactor key={`${index}-${reactor.name}-${reactor.color}`} name={reactor.name} color={reactor.color} laughed={reactor.laughed} verifiedStudent={reactor.verifiedStudent} school={reactor.school} />)}
                 </Card>
               </View>
             </View>
@@ -142,7 +143,7 @@ function MoneyTicker({ cents }: { cents: number }) {
   return <Money cents={value} size="lg" />;
 }
 
-function Reactor({ name, color, laughed }: { name: string; color: string; laughed: boolean }) {
+function Reactor({ name, color, laughed, verifiedStudent, school }: { name: string; color: string; laughed: boolean; verifiedStudent?: boolean; school?: string }) {
   const [entrance] = useState(() => new Animated.Value(0));
   useEffect(() => {
     const animation = Animated.spring(entrance, { toValue: 1, useNativeDriver: true, friction: 7, tension: 65 });
@@ -152,6 +153,7 @@ function Reactor({ name, color, laughed }: { name: string; color: string; laughe
   return <Animated.View style={[mediaLayout.row, { transform: [{ scale: entrance }] }]}>
     <Avatar name={name} color={color} />
     <Body>{name}</Body>
+    {verifiedStudent ? <VerifiedStudentBadge school={school} /> : null}
     <Badge tone={laughed ? 'good' : 'muted'}>{laughed ? 'Laughed' : 'Stayed deadpan'}</Badge>
   </Animated.View>;
 }

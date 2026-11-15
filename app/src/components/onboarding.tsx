@@ -1,21 +1,47 @@
 import { useMutation } from 'convex/react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 
 import { api } from '../../convex/_generated/api';
 import { useSession } from '@/lib/session';
-import { Avatar, Badge, Body, Button, Card, Muted, Screen, Title, tokens } from '@/ui';
+import {
+  Avatar,
+  Badge,
+  Body,
+  Button,
+  Card,
+  Muted,
+  Screen,
+  Title,
+  VerifiedStudentBadge,
+  tokens,
+} from '@/ui';
 
 const COLORS = ['#2EE59A', '#5B8CFF', '#FFB020', '#FF6B7A', '#C9B8FF', '#5AC8FA'];
 
-// Name + color. Same account can post gigs (creator) and react (reactor).
+/** Mirror of Convex parseEduEmail for live preview (domain check only). */
+function previewEdu(raw: string) {
+  const email = raw.trim().toLowerCase();
+  const at = email.lastIndexOf('@');
+  if (at < 1) return null;
+  const domain = email.slice(at + 1);
+  if (!domain.endsWith('.edu')) return null;
+  const withoutEdu = domain.slice(0, -'.edu'.length);
+  const label = withoutEdu.split('.').filter(Boolean).pop();
+  if (!label) return null;
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+// Name + color (+ optional .edu). Same account can post gigs and react.
 export function Onboarding() {
   const { setUserId } = useSession();
   const createUser = useMutation(api.users.create);
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [color, setColor] = useState(COLORS[0]);
   const [busy, setBusy] = useState(false);
 
+  const schoolPreview = useMemo(() => previewEdu(email), [email]);
   const canContinue = name.trim().length > 0 && !busy;
 
   return (
@@ -53,6 +79,35 @@ export function Onboarding() {
           }}
         />
 
+        <View style={{ gap: tokens.space.sm }}>
+          <TextInput
+            placeholder="School email (optional)"
+            placeholderTextColor={tokens.muted}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            textContentType="emailAddress"
+            style={{
+              backgroundColor: tokens.bg,
+              color: tokens.text,
+              borderRadius: tokens.radiusSm,
+              borderWidth: 1,
+              borderColor: tokens.cardBorder,
+              padding: tokens.pad,
+              fontSize: tokens.type.body,
+            }}
+          />
+          {schoolPreview ? (
+            <VerifiedStudentBadge school={schoolPreview} />
+          ) : email.trim() ? (
+            <Muted>Use a .edu address to get a verified student badge.</Muted>
+          ) : (
+            <Muted>Optional: add your .edu so brands know you're Gen Z verified.</Muted>
+          )}
+        </View>
+
         <View style={{ flexDirection: 'row', gap: tokens.space.md, flexWrap: 'wrap' }}>
           {COLORS.map((c) => {
             const selected = color === c;
@@ -81,7 +136,12 @@ export function Onboarding() {
           onPress={async () => {
             setBusy(true);
             try {
-              const userId = await createUser({ name: name.trim(), color });
+              const trimmedEmail = email.trim();
+              const userId = await createUser({
+                name: name.trim(),
+                color,
+                ...(trimmedEmail ? { email: trimmedEmail } : {}),
+              });
               setUserId(userId);
             } finally {
               setBusy(false);

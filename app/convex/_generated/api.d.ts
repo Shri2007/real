@@ -9,6 +9,8 @@
  */
 
 import type * as gigs from "../gigs.js";
+import type * as http from "../http.js";
+import type * as keiki from "../keiki.js";
 import type * as reactions from "../reactions.js";
 import type * as users from "../users.js";
 
@@ -20,6 +22,8 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   gigs: typeof gigs;
+  http: typeof http;
+  keiki: typeof keiki;
   reactions: typeof reactions;
   users: typeof users;
 }>;
