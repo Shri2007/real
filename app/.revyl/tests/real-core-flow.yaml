@@ -1,0 +1,40 @@
+# Revyl Test Definition
+
+_meta:
+    remote_id: cd7ccae3-5e52-457e-a8ff-3edf91d3c60e
+    remote_version: 1
+    local_version: 1
+    last_synced_at: "2026-11-15T11:43:52-08:00"
+    checksum: 1a676612005b96551ace75fe924b237fd66747226d424bebae89361ded066a1a
+test:
+    metadata:
+        name: real-core-flow
+        platform: ios
+        tags:
+            - smoke
+            - core
+    build:
+        name: OPEN MIC iOS
+    blocks:
+        - type: validation
+          step_description: The onboarding screen shows the REAL title and a "Your name" text field.
+        - type: instructions
+          step_description: Tap the "Your name" field and type "Revyl Tester".
+        - type: instructions
+          step_description: Tap the Continue button.
+        - type: validation
+          step_description: The React tab is visible with a list of paid gigs, each showing a price and spots left.
+        - type: instructions
+          step_description: 'On the gig titled "Demo: is this funny?", tap "Watch clip".'
+        - type: validation
+          step_description: The watch screen shows the clip title, a video area and a small selfie/camera preview.
+        - type: instructions
+          step_description: Wait until the "Start reaction" button is enabled (the face model finishes loading), then tap it.
+        - type: instructions
+          step_description: Wait for the 3-2-1 countdown and let the clip play to the end (about 15 seconds). Do not tap anything.
+        - type: validation
+          step_description: A result screen is shown that says either "Paid $0.50" or "Not paid" (the simulator has no camera, so "Not paid" is expected), along with the line "We pay for attention, not applause".
+        - type: instructions
+          step_description: Tap "Back to feed".
+        - type: validation
+          step_description: The React tab gig feed is visible again.
