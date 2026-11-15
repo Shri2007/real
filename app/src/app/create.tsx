@@ -17,6 +17,7 @@ export default function CreateScreen() {
   const [b, setB] = useState<Id<'gigs'> | null>(null);
   return <Screen><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: tokens.space.lg, paddingBottom: tokens.space.xxl }}>
     <Title>Create</Title>
+    <Body>Test your ad or video on verified Gen Z.</Body>
     {!userId ? <Muted>Choose your name to create tests.</Muted> : mode === 'new' ? <NewTest userId={userId} onCancel={() => setMode('mine')} onDone={(id) => { setSelected(id); setMode('results'); }} /> : <>
       {mode !== 'mine' && <Button label="Back to My tests" variant="secondary" onPress={() => setMode('mine')} />}
       {mode === 'results' && selected ? <Results key={selected} gigId={selected} /> : mode === 'compare' && a && b ? <Comparison a={a} b={b} /> : <>
@@ -26,7 +27,7 @@ export default function CreateScreen() {
         <Body>A: {gigs?.find((g) => g._id === a)?.title ?? 'Choose a test'}</Body>
         <Body>B: {gigs?.find((g) => g._id === b)?.title ?? 'Choose a test'}</Body>
         <Button label="Compare A and B" disabled={!a || !b || a === b} onPress={() => setMode('compare')} />
-        {gigs === undefined ? <Muted>Loading your tests…</Muted> : !gigs.length ? <Body>No tests yet. Post a clip to get real reactions.</Body> : gigs.map((gig) => <Card key={gig._id} style={{ gap: tokens.space.md }}>
+        {gigs === undefined ? <Muted>Loading your tests…</Muted> : !gigs.length ? <Body>No tests yet: post a clip and see what verified Gen Z actually does.</Body> : gigs.map((gig) => <Card key={gig._id} style={{ gap: tokens.space.md }}>
           <Body>{gig.title}</Body><Muted>{gig.status} · {gig.filled}/{gig.slots} filled · ${(gig.priceCents / 100).toFixed(2)} per reaction</Muted>
           <Button label={`Open ${gig.title}`} onPress={() => { setSelected(gig._id); setMode('results'); }} />
           <Button variant="secondary" label={a === gig._id ? 'Selected as A' : 'Use as cut A'} disabled={b === gig._id} onPress={() => setA(gig._id)} />

@@ -16,7 +16,7 @@ export default function ReactorScreen() {
     <Title>React</Title>
     <Body>Get paid to watch. Your honest reaction counts.</Body>
     <ScrollView>
-      {gigs === undefined ? <Muted>Loading gigs…</Muted> : gigs.length === 0 ? <Muted>No gigs available yet. Check back soon.</Muted>
+      {gigs === undefined ? <Muted>Loading gigs…</Muted> : gigs.length === 0 ? <Muted>No gigs yet: check back soon.</Muted>
         : gigs.map((gig) => <Card key={gig._id}>
           <Title>{gig.title}</Title>
           <Body>{gig.creatorName}</Body>
