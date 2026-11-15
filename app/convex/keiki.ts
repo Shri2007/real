@@ -58,12 +58,17 @@ export const createGig = httpAction(async (ctx, req) => {
   const slots = b.slots ?? 5; const priceCents = b.priceCents ?? 50;
   if (typeof slots !== 'number' || !Number.isInteger(slots) || slots < 3 || slots > 20 || typeof priceCents !== 'number' || !Number.isInteger(priceCents) || priceCents < 1 || priceCents > 10000) return json({ error: 'Use 3–20 slots and a positive integer priceCents (max 10000)' }, 400);
   let videoUrl: string;
-  try { videoUrl = publicVideo(b.videoUrl); } catch { return json({ error: 'Use a public HTTPS video URL' }, 400); }
+  try { videoUrl = publicVideo(b.videoUrl); } catch (e) {
+    console.error('[keiki/gig] rejected videoUrl', { host: (() => { try { return new URL(String(b.videoUrl)).host; } catch { return 'unparseable'; } })(), reason: e instanceof Error ? e.message : String(e) });
+    return json({ error: 'Use a public HTTPS video URL' }, 400);
+  }
+  console.log('[keiki/gig] fetching video', { host: new URL(videoUrl).host, hasAttachmentStyle: videoUrl.includes('attachment') });
   let storageId: Id<'_storage'>;
   try {
     // Follow redirects (iMessage/Keiki attachment + share links redirect to a CDN), then re-validate the final host.
     const response = await fetch(videoUrl, { redirect: 'follow', signal: AbortSignal.timeout(30000) });
-    if (!response.ok || !response.body) throw new Error('Video unavailable');
+    console.log('[keiki/gig] video response', { status: response.status, finalHost: response.url ? new URL(response.url).host : null, type: response.headers.get('content-type'), length: response.headers.get('content-length') });
+    if (!response.ok || !response.body) throw new Error(`Video unavailable (HTTP ${response.status})`);
     if (response.url) publicVideo(response.url);
     const rawType = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase() || '';
     const okType = rawType.startsWith('video/') || rawType === 'application/octet-stream' || rawType === 'binary/octet-stream' || rawType === '';
@@ -77,7 +82,11 @@ export const createGig = httpAction(async (ctx, req) => {
     }
     if (!bytes) throw new Error('Empty video');
     storageId = await ctx.storage.store(new Blob(chunks, { type }));
-  } catch { return json({ error: 'Could not fetch video. Send the video as an attachment or a public HTTPS video link, at most 50 MB.' }, 400); }
+  } catch (e) {
+    const reason = e instanceof Error ? e.message : String(e);
+    console.error('[keiki/gig] video fetch failed', { reason });
+    return json({ error: 'Could not fetch video. Send the video as an attachment or a public HTTPS video link, at most 50 MB.', reason }, 400);
+  }
   const creatorId = await ctx.runMutation(creatorRef, { handle: b.handle.trim(), ...(typeof b.name === 'string' ? { name: b.name.trim() } : {}) });
   const gigId: Id<'gigs'> = await ctx.runMutation(api.gigs.create, { creatorId, title: b.title.trim(), videoStorageId: storageId, slots, priceCents,
     ...(typeof b.question === 'string' ? { question: b.question.trim() } : {}) });
