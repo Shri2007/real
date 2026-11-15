@@ -118,7 +118,7 @@ function Playback({ gigId, userId, onBack, title, question, videoUrl }: Props & 
       <LaughDetector ref={detector} onScore={onScore} style={{ width: 96, height: 128 }} onStatus={(text) => {
         setCameraStatus(text);
         if (text === 'model ready') setDetectorReady(true);
-        if (text === 'camera on' && !recording.current) detector.current?.stop();
+        if (text === 'camera on' && phaseRef.current === 'idle') detector.current?.stop();
         if (text.startsWith('camera error') && recording.current) finishRef.current(false);
       }} />
       <Muted>{cameraStatus}</Muted>
@@ -126,6 +126,8 @@ function Playback({ gigId, userId, onBack, title, question, videoUrl }: Props & 
         <Body>Keep your face in frame for the whole clip. Your camera runs only during the clip.</Body>
         <Button label="Start reaction" disabled={!detectorReady || status !== 'readyToPlay'} onPress={() => {
           phaseRef.current = 'countdown'; setCount(3); setPhase('countdown');
+          // Warm the camera up during the 3-2-1 so the first second of the clip has face data.
+          detector.current?.start();
         }} />
         {status === 'error' && <Body>Video could not load. Return to the feed and try again.</Body>}
       </>}
