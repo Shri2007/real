@@ -1,4 +1,5 @@
 import { useAction } from 'convex/react';
+import { ConvexError } from 'convex/values';
 import { useState } from 'react';
 import { TextInput, View } from 'react-native';
 import { Body, Button, Muted, VerifiedStudentBadge, tokens } from '@/ui';
@@ -21,7 +22,7 @@ export function EduVerify({ userId, initialEmail = '', onVerified }: { userId: I
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
     setError('');
-    try { await fn(); } catch (e) { setError(e instanceof Error ? e.message.replace(/^.*Uncaught Error: /s, '').split('\n')[0] : 'Something went wrong. Try again.'); }
+    try { await fn(); } catch (e) { setError(e instanceof ConvexError && typeof e.data === 'string' ? e.data : 'Something went wrong. Try again.'); }
     finally { setBusy(false); }
   };
   const send = () => run(async () => { setSentTo((await start({ userId, email })).email); setCode(''); });

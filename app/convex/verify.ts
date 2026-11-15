@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { action, internalAction, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
@@ -22,11 +22,11 @@ export const saveCode = internalMutation({
   returns: v.null(),
   handler: async (ctx, { userId, email, codeHash }) => {
     const user = await ctx.db.get(userId);
-    if (!user) throw new Error("Account not found");
+    if (!user) throw new ConvexError("Account not found");
     const taken = await ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", email)).take(5);
-    if (taken.some((u) => u._id !== userId && u.verifiedStudent)) throw new Error("That school email is already verified on another account");
+    if (taken.some((u) => u._id !== userId && u.verifiedStudent)) throw new ConvexError("That school email is already verified on another account");
     const prev = await ctx.db.query("emailCodes").withIndex("by_userId", (q) => q.eq("userId", userId)).unique();
-    if (prev && Date.now() - prev._creationTime < RESEND_COOLDOWN_MS) throw new Error("Wait 30 seconds before asking for another code");
+    if (prev && Date.now() - prev._creationTime < RESEND_COOLDOWN_MS) throw new ConvexError("Wait 30 seconds before asking for another code");
     if (prev) await ctx.db.delete(prev._id);
     await ctx.db.insert("emailCodes", { userId, email, codeHash, expiresAt: Date.now() + CODE_TTL_MS, attempts: 0 });
     return null;
@@ -70,7 +70,7 @@ export const start = action({
   returns: v.object({ email: v.string() }),
   handler: async (ctx, { userId, email: raw }): Promise<{ email: string }> => {
     const edu = parseEduEmail(raw);
-    if (!edu.verifiedStudent || !edu.email) throw new Error("Use your school email ending in .edu");
+    if (!edu.verifiedStudent || !edu.email) throw new ConvexError("Use your school email ending in .edu");
     const digits = new Uint32Array(1);
     crypto.getRandomValues(digits);
     const code = String(digits[0] % 1_000_000).padStart(6, "0");
@@ -80,7 +80,7 @@ export const start = action({
     } catch (e) {
       await ctx.runMutation(internal.verify.dropCode, { userId });
       console.error(e);
-      throw new Error("Could not send the email. Try again in a minute.");
+      throw new ConvexError("Could not send the email. Try again in a minute.");
     }
     return { email: edu.email };
   },
@@ -122,12 +122,12 @@ export const confirm = action({
   returns: v.object({ school: v.union(v.string(), v.null()) }),
   handler: async (ctx, { userId, code }): Promise<{ school: string | null }> => {
     const clean = code.replace(/\D/g, "");
-    if (clean.length !== 6) throw new Error("Enter the 6-digit code");
+    if (clean.length !== 6) throw new ConvexError("Enter the 6-digit code");
     const result: { ok: true; school: string | null } | { ok: false; error: string } = await ctx.runMutation(internal.verify.checkCode, {
       userId: userId as Id<"users">,
       codeHash: await sha256(`${userId}:${clean}`),
     });
-    if (!result.ok) throw new Error(result.error);
+    if (!result.ok) throw new ConvexError(result.error);
     return { school: result.school };
   },
 });
