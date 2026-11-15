@@ -31,6 +31,10 @@ build:
                 output_path: ios/build/Build/Products/Release-iphonesimulator/*.app
 pr_review:
     enabled: true
+    review_triggers:
+        paths: []
+        labels: []
+        drafts: false
     build:
         kind: revyl
         profile: preview
@@ -38,3 +42,8 @@ pr_review:
         enabled: true
         harness:
             kind: revyl
+        system_prompt: ""
+        always_verify: []
+    workflow_ids: []
+    strict_ci_check:
+        build: true
