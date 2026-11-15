@@ -49,11 +49,31 @@ function ResultsContent({ gigId, label }: { gigId: Id<'gigs'>; label?: string })
     {results.reactors.map((reactor, i) => <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space.sm, flexWrap: 'wrap' }}>
       <Avatar name={reactor.name} color={reactor.color} /><Body>{reactor.name}</Body><Badge tone={reactor.laughed ? 'good' : 'muted'}>{reactor.laughed ? 'Laughed' : 'Stayed deadpan'}</Badge>
     </View>)}
+    <WhatPeopleSaid gigId={gigId} />
     {gig.status === 'draft' && <>
       <Muted>Saved draft. Video duration must be verified at 30 seconds or less before publishing.</Muted>
       <Button label={busy ? 'Publishing…' : 'Publish saved draft (free test)'} disabled={busy || !validDuration(duration)} onPress={publishDraft} />
     </>}
     {!!error && <Body>{error}</Body>}
+  </Card>;
+}
+
+function WhatPeopleSaid({ gigId }: { gigId: Id<'gigs'> }) {
+  const quotes = useQuery(api.voice.forGig, { gigId });
+  if (!quotes?.length) return null;
+  const counts = new Map<string, number>();
+  for (const q of quotes) for (const t of q.tags) counts.set(t, (counts.get(t) ?? 0) + 1);
+  const topTags = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
+  return <Card style={{ gap: tokens.space.sm }}>
+    <Body>What people said</Body>
+    {topTags.length > 0 && <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space.xs }}>
+      {topTags.map(([tag, n]) => <Badge key={tag} tone="live">{tag} ×{n}</Badge>)}
+    </View>}
+    {quotes.map((q, i) => <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space.sm, flexWrap: 'wrap' }}>
+      <Avatar name={q.name} color={q.color} size={32} />
+      <Body style={{ flex: 1 }}>“{q.whyQuote}”</Body>
+      {q.sentiment && <Badge tone={q.sentiment === 'pos' ? 'good' : q.sentiment === 'neg' ? 'bad' : 'muted'}>{q.sentiment === 'pos' ? 'Liked it' : q.sentiment === 'neg' ? 'Not for them' : 'Mixed'}</Badge>}
+    </View>)}
   </Card>;
 }
 

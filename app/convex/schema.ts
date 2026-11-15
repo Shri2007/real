@@ -40,6 +40,12 @@ export default defineSchema({
     watchedToEnd: v.boolean(),
     valid: v.boolean(), // face present enough + watched to end → paid
     earnedCents: v.number(),
+    // Hold-to-talk "why" after the clip (Lane V): audio → transcript → verbatim quote + reason tags.
+    whyAudioStorageId: v.optional(v.id("_storage")),
+    whyText: v.optional(v.string()),
+    whyQuote: v.optional(v.string()),
+    whyTags: v.optional(v.array(v.string())),
+    whySentiment: v.optional(v.union(v.literal("pos"), v.literal("neg"), v.literal("mixed"))),
   })
     .index("by_gigId", ["gigId"])
     .index("by_reactorId", ["reactorId"])

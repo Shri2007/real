@@ -6,6 +6,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, BackHandler } from 'react-native';
 import { LaughDetector, LaughDetectorHandle, LaughScore } from '@/laugh/LaughDetector';
+import { WhyRecorder } from './WhyRecorder';
 import { Body, Button, Muted, Screen, Title } from '@/ui';
 import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
@@ -139,6 +140,7 @@ function Playback({ gigId, userId, onBack, title, question, videoUrl }: Props & 
       <Title>{result.valid ? `Paid $${(result.earnedCents / 100).toFixed(2)} ✅` : 'Not paid: keep your face in frame'}</Title>
       <Body>{result.laughed ? 'You laughed' : 'You stayed deadpan'}</Body>
       <Body>Both count. We pay for attention, not applause.</Body>
+      {result.valid && <WhyRecorder gigId={gigId} reactorId={userId} />}
       <Button label="Back to feed" onPress={onBack} />
     </> : <>
       <Body>{error || 'Saving your reaction…'}</Body>
