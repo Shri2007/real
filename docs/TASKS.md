@@ -2,6 +2,10 @@
 
 **Ground rules for every agent:** read `AGENTS.md` first. Work only in the files listed for your lane. Use the Convex functions below through `api.*` (`import { api } from '../../convex/_generated/api'`; the path depends on the file's depth). Don't edit `convex/` unless you're Lane D. Test on a real phone in Expo Go before merging. Branch `lane-x/<thing>`, open a PR (Revyl checks it), merge fast.
 
+
+## 🎨 UI rule (read before building any screen)
+The current UI is a placeholder. **Do NOT copy its styling or layout.** Build features **functionality-first** using only the shared primitives in `src/ui/` (`Screen`, `Card`, `Button`, `Title`, `Body`, `Muted`). If a primitive is missing, add a plain one there. No hard-coded colors, fonts, or shadows in feature files. **Lane A (Cursor) owns `src/ui/` and the design**, and a later design pass restyles everything at once by changing `src/ui/` only.
+
 ## Already done (10:00–10:25)
 - Expo app + Convex deployed. `ConvexProvider` + `SessionProvider` in `src/app/_layout.tsx`.
 - **Onboarding** (`src/components/onboarding.tsx`): name + color → create a group or join with a code. Session (userId, groupId) is saved on the device. `useSession()` from `@/lib/session` gives `{ userId, groupId }`. `todayKey()` gives `YYYY-MM-DD`.
