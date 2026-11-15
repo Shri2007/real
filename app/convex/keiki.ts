@@ -61,10 +61,14 @@ export const createGig = httpAction(async (ctx, req) => {
   try { videoUrl = publicVideo(b.videoUrl); } catch { return json({ error: 'Use a public HTTPS video URL' }, 400); }
   let storageId: Id<'_storage'>;
   try {
-    const response = await fetch(videoUrl, { redirect: 'error', signal: AbortSignal.timeout(30000) });
+    // Follow redirects (iMessage/Keiki attachment + share links redirect to a CDN), then re-validate the final host.
+    const response = await fetch(videoUrl, { redirect: 'follow', signal: AbortSignal.timeout(30000) });
     if (!response.ok || !response.body) throw new Error('Video unavailable');
-    const type = response.headers.get('content-type')?.split(';')[0] || '';
-    if (!type.startsWith('video/') && type !== 'application/octet-stream') throw new Error('URL must return a video file');
+    if (response.url) publicVideo(response.url);
+    const rawType = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase() || '';
+    const okType = rawType.startsWith('video/') || rawType === 'application/octet-stream' || rawType === 'binary/octet-stream' || rawType === '';
+    if (!okType) throw new Error('URL must return a video file');
+    const type = rawType.startsWith('video/') ? rawType : 'video/mp4';
     const reader = response.body.getReader(); const chunks: Uint8Array<ArrayBuffer>[] = []; let bytes = 0;
     while (true) {
       const { value, done } = await reader.read(); if (done) break;
@@ -73,7 +77,7 @@ export const createGig = httpAction(async (ctx, req) => {
     }
     if (!bytes) throw new Error('Empty video');
     storageId = await ctx.storage.store(new Blob(chunks, { type }));
-  } catch { return json({ error: 'Could not fetch video. Send a direct HTTPS video URL, no redirects, at most 50 MB.' }, 400); }
+  } catch { return json({ error: 'Could not fetch video. Send the video as an attachment or a public HTTPS video link, at most 50 MB.' }, 400); }
   const creatorId = await ctx.runMutation(creatorRef, { handle: b.handle.trim(), ...(typeof b.name === 'string' ? { name: b.name.trim() } : {}) });
   const gigId: Id<'gigs'> = await ctx.runMutation(api.gigs.create, { creatorId, title: b.title.trim(), videoStorageId: storageId, slots, priceCents,
     ...(typeof b.question === 'string' ? { question: b.question.trim() } : {}) });
