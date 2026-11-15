@@ -29,33 +29,33 @@ const BRANDS = [
 ];
 
 const GIGS = [
-  { brand: 0, title: "Volt: 5am gym ad", question: "Would this make you grab a can before a lift?", tags: ["energy drinks", "gym"] },
-  { brand: 0, title: "Volt: finals-week skit", question: "Is the ending funny?", tags: ["energy drinks", "comedy", "study"] },
-  { brand: 1, title: "GlowLab serum before/after", question: "Do you trust this result?", tags: ["skincare"] },
-  { brand: 1, title: "GlowLab GRWM for a night out", question: "Would you try this routine?", tags: ["skincare", "fashion"] },
-  { brand: 2, title: "Campus Bites: $6 dorm bowl", question: "Would you order this tonight?", tags: ["food"] },
-  { brand: 2, title: "Campus Bites roommate prank", question: "Does the joke land?", tags: ["food", "comedy"] },
-  { brand: 3, title: "StudyPal: cram with AI", question: "Would this actually help you study?", tags: ["study", "tech"] },
-  { brand: 4, title: "Threadbare thrift haul", question: "Which fit would you wear?", tags: ["fashion"] },
-  { brand: 5, title: "LoopBeats: make a beat in 30s", question: "Would you download this?", tags: ["music", "tech"] },
-  { brand: 6, title: "PawPals: dog reacts to new toy", question: "Is this cute or cringe?", tags: ["pets", "comedy"] },
-  { brand: 7, title: "Pixel Arcade launch trailer", question: "Would you play this?", tags: ["gaming", "tech"] },
-  { brand: 0, title: "Volt: spring break road trip", question: "Does this feel like your trip?", tags: ["travel", "energy drinks"] },
+  { brand: 0, title: "Volt: 5am gym ad", question: "Would this make you grab a can before a lift?", tags: ["energy drinks", "gym"], priceCents: 250 },
+  { brand: 0, title: "Volt: finals-week skit", question: "Is the ending funny?", tags: ["energy drinks", "comedy", "study"], priceCents: 200 },
+  { brand: 1, title: "GlowLab serum before/after", question: "Do you trust this result?", tags: ["skincare"], priceCents: 300 },
+  { brand: 1, title: "GlowLab GRWM for a night out", question: "Would you try this routine?", tags: ["skincare", "fashion"], priceCents: 250 },
+  { brand: 2, title: "Campus Bites: $6 dorm bowl", question: "Would you order this tonight?", tags: ["food"], priceCents: 150 },
+  { brand: 2, title: "Campus Bites roommate prank", question: "Does the joke land?", tags: ["food", "comedy"], priceCents: 200 },
+  { brand: 3, title: "StudyPal: cram with AI", question: "Would this actually help you study?", tags: ["study", "tech"], priceCents: 250 },
+  { brand: 4, title: "Threadbare thrift haul", question: "Which fit would you wear?", tags: ["fashion"], priceCents: 200 },
+  { brand: 5, title: "LoopBeats: make a beat in 30s", question: "Would you download this?", tags: ["music", "tech"], priceCents: 150 },
+  { brand: 6, title: "PawPals: dog reacts to new toy", question: "Is this cute or cringe?", tags: ["pets", "comedy"], priceCents: 150 },
+  { brand: 7, title: "Pixel Arcade launch trailer", question: "Would you play this?", tags: ["gaming", "tech"], priceCents: 300 },
+  { brand: 0, title: "Volt: spring break road trip", question: "Does this feel like your trip?", tags: ["travel", "energy drinks"], priceCents: 200 },
 ];
 
 const UGC = [
-  { brand: 0, gig: 0, brief: "15s gym-bag check: show your pre-lift routine with a can of Volt. Natural, no script.", payoutCents: 2500, spots: 3 },
-  { brand: 1, gig: 3, brief: "Get ready with me using the GlowLab serum. Say honestly how your skin feels after.", payoutCents: 4000, spots: 2 },
-  { brand: 2, gig: 4, brief: "Order the $6 dorm bowl and give a 20s honest first-bite review.", payoutCents: 2000, spots: 4 },
-  { brand: 3, gig: 6, brief: "Show your finals-week study setup and how you'd use StudyPal.", payoutCents: 3000, spots: 3 },
-  { brand: 4, gig: 7, brief: "Style two Threadbare thrift pieces into one fit and show the try-on.", payoutCents: 3500, spots: 3 },
-  { brand: 5, gig: 8, brief: "Make a 20s beat in LoopBeats and show the before/after.", payoutCents: 3000, spots: 3 },
-  { brand: 6, gig: 9, brief: "Film your pet meeting a PawPals toy for the first time.", payoutCents: 2500, spots: 4 },
-  { brand: 7, gig: 10, brief: "Play Pixel Arcade for 30s and react to your first win.", payoutCents: 3000, spots: 3 },
-  { brand: 0, gig: 1, brief: "Finals-week skit: your 2am study crash, saved by a Volt.", payoutCents: 3500, spots: 2 },
-  { brand: 1, gig: 2, brief: "Honest 7-day GlowLab check-in: day 1 vs day 7 skin.", payoutCents: 5000, spots: 2 },
-  { brand: 2, gig: 5, brief: "Prank your roommate with a Campus Bites late-night delivery.", payoutCents: 3000, spots: 2 },
-  { brand: 0, gig: 11, brief: "Road-trip GoPro moment with a Volt in the cupholder.", payoutCents: 4000, spots: 2 },
+  { brand: 0, gig: 0, brief: "15s gym-bag check: show your pre-lift routine with a can of Volt. Natural, no script.", payoutCents: 9000, spots: 4 },
+  { brand: 1, gig: 3, brief: "Get ready with me using the GlowLab serum. Say honestly how your skin feels after.", payoutCents: 15000, spots: 3 },
+  { brand: 2, gig: 4, brief: "Order the $6 dorm bowl and give a 20s honest first-bite review.", payoutCents: 7500, spots: 5 },
+  { brand: 3, gig: 6, brief: "Show your finals-week study setup and how you'd use StudyPal.", payoutCents: 10000, spots: 3 },
+  { brand: 4, gig: 7, brief: "Style two Threadbare thrift pieces into one fit and show the try-on.", payoutCents: 12000, spots: 3 },
+  { brand: 5, gig: 8, brief: "Make a 20s beat in LoopBeats and show the before/after.", payoutCents: 10000, spots: 3 },
+  { brand: 6, gig: 9, brief: "Film your pet meeting a PawPals toy for the first time.", payoutCents: 8000, spots: 4 },
+  { brand: 7, gig: 10, brief: "Play Pixel Arcade for 30s and react to your first win.", payoutCents: 10000, spots: 3 },
+  { brand: 0, gig: 1, brief: "Finals-week skit: your 2am study crash, saved by a Volt.", payoutCents: 12500, spots: 2 },
+  { brand: 1, gig: 2, brief: "Honest 7-day GlowLab check-in: day 1 vs day 7 skin.", payoutCents: 20000, spots: 2 },
+  { brand: 2, gig: 5, brief: "Prank your roommate with a Campus Bites late-night delivery.", payoutCents: 9000, spots: 3 },
+  { brand: 0, gig: 11, brief: "Road-trip GoPro moment with a Volt in the cupholder.", payoutCents: 15000, spots: 2 },
 ];
 
 // Adds any UGC jobs from the list above that a seeded database doesn't have yet (safe to rerun).
@@ -110,7 +110,7 @@ export const insertAll = internalMutation({
       gigIds.push(
         await ctx.db.insert("gigs", {
           creatorId: brandFor(g.brand), title: g.title, question: g.question, tags: g.tags,
-          videoStorageId: videos[i % videos.length], durationMs: 10000, priceCents: 50, slots: 10,
+          videoStorageId: videos[i % videos.length], durationMs: 10000, priceCents: g.priceCents, slots: 25,
           filled: 0, status: "live", paid: true,
         }),
       );
@@ -126,7 +126,7 @@ export const insertAll = internalMutation({
     const gig = gigIds[0];
     for (const r of REACTORS) {
       const reactorId = await ctx.db.insert("users", {
-        name: r.name, color: r.color, balanceCents: 50, school: r.school, verifiedStudent: true,
+        name: r.name, color: r.color, balanceCents: GIGS[0].priceCents, school: r.school, verifiedStudent: true,
         email: `${r.name.toLowerCase()}@${r.school.toLowerCase()}.edu`, taste: [{ tag: r.taste, w: 4 }],
       });
       const curve = Array.from({ length: 100 }, (_, i) => {
@@ -136,12 +136,45 @@ export const insertAll = internalMutation({
       });
       const peak = Math.max(...curve.map((p) => p.s));
       await ctx.db.insert("reactions", {
-        gigId: gig, reactorId, curve, peak, laughed: peak >= 0.45, facePresentPct: 100, watchedToEnd: true, valid: true, earnedCents: 50,
+        gigId: gig, reactorId, curve, peak, laughed: peak >= 0.45, facePresentPct: 100, watchedToEnd: true, valid: true, earnedCents: GIGS[0].priceCents,
         whyText: r.why, whyQuote: r.why, whyTags: r.tags, whySentiment: r.sentiment,
       });
     }
     await ctx.db.patch(gig, { filled: REACTORS.length });
     return { gigs: gigIds.length, opps: UGC.length, reactions: REACTORS.length };
+  },
+});
+
+// Moves an already-seeded database to the prices above (reactions $1.50–$3, UGC videos $75–$200). Safe to rerun:
+//   npx convex run seed:realisticPrices
+export const realisticPrices = internalMutation({
+  args: {},
+  returns: v.object({ gigs: v.number(), opps: v.number(), reactions: v.number() }),
+  handler: async (ctx) => {
+    const n = { gigs: 0, opps: 0, reactions: 0 };
+    const gigs = await ctx.db.query("gigs").withIndex("by_status", (q) => q.eq("status", "live")).take(500);
+    for (const g of GIGS) {
+      for (const row of gigs.filter((x) => x.title === g.title && x.priceCents !== g.priceCents)) {
+        await ctx.db.patch(row._id, { priceCents: g.priceCents, slots: Math.max(row.slots, 25) });
+        n.gigs++;
+        const reactions = await ctx.db.query("reactions").withIndex("by_gigId", (q) => q.eq("gigId", row._id)).take(200);
+        for (const r of reactions) {
+          const reactor = await ctx.db.get(r.reactorId);
+          if (!r.valid || !reactor || !REACTORS.some((x) => x.name === reactor.name)) continue;
+          await ctx.db.patch(r._id, { earnedCents: g.priceCents });
+          await ctx.db.patch(reactor._id, { balanceCents: reactor.balanceCents - r.earnedCents + g.priceCents });
+          n.reactions++;
+        }
+      }
+    }
+    const opps = await ctx.db.query("ugcOpps").take(1000);
+    for (const u of UGC) {
+      for (const o of opps.filter((x) => x.brief === u.brief && (x.payoutCents !== u.payoutCents || x.spots !== u.spots))) {
+        await ctx.db.patch(o._id, { payoutCents: u.payoutCents, spots: Math.max(u.spots, o.claimed) });
+        n.opps++;
+      }
+    }
+    return n;
   },
 });
 

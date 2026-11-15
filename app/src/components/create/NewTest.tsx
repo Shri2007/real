@@ -20,7 +20,7 @@ export function NewTest({ userId, onDone, onCancel }: { userId: Id<'users'>; onD
   const [title, setTitle] = useState('');
   const [question, setQuestion] = useState('');
   const [slots, setSlots] = useState('5');
-  const [price, setPrice] = useState('50');
+  const [price, setPrice] = useState('200');
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
   const inputs = useRef<Record<string, ComponentRef<typeof TextInput> | null>>({});

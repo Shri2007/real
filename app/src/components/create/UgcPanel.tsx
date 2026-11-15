@@ -27,7 +27,7 @@ export function UgcPanel({ gigId, brandId, gigTitle }: { gigId: Id<'gigs'>; bran
   const publishFree = useMutation(api.ugc.publishFree);
   const [open, setOpen] = useState(false);
   const [brief, setBrief] = useState('');
-  const [payout, setPayout] = useState('25');
+  const [payout, setPayout] = useState('100');
   const [spots, setSpots] = useState('3');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
