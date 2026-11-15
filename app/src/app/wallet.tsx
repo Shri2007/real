@@ -150,20 +150,22 @@ export default function WalletScreen() {
         {wallet.items.length === 0 ? (
           <EmptyState title="No reactions yet" body="No earnings yet: watch a clip on React. You get paid for attention, laugh or not." />
         ) : (
-          wallet.items.map((i) => (
-            <Card key={i.id} style={{ gap: tokens.space.sm }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: tokens.space.md, alignItems: 'flex-start' }}><Body style={{ flex: 1 }}>{i.gigTitle}</Body><Muted>{ago(i.at)}</Muted></View>
-              {i.kind === 'payout' && i.payoutStatus ? (
-                <Badge tone={PAYOUT[i.payoutStatus].tone}>{`−${(-i.earnedCents / 100).toFixed(2)} · ${PAYOUT[i.payoutStatus].label}`}</Badge>
-              ) : i.kind === 'ugc' ? (
-                <Badge tone="live">{`+$${(i.earnedCents / 100).toFixed(2)} · UGC approved`}</Badge>
-              ) : i.valid ? (
-                <Badge tone="good">+${(i.earnedCents / 100).toFixed(2)}</Badge>
-              ) : (
-                <Badge tone="bad">Not paid: face out of frame</Badge>
-              )}
-            </Card>
-          ))
+          <View style={{ gap: tokens.space.md }}>
+            {wallet.items.map((i, idx) => (
+              <Card key={i.id ?? `${i.at}-${idx}`} style={{ gap: tokens.space.sm }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: tokens.space.md, alignItems: 'flex-start' }}><Body style={{ flex: 1 }}>{i.gigTitle}</Body><Muted>{ago(i.at)}</Muted></View>
+                {i.kind === 'payout' && i.payoutStatus ? (
+                  <Badge tone={PAYOUT[i.payoutStatus].tone}>{`−${(-i.earnedCents / 100).toFixed(2)} · ${PAYOUT[i.payoutStatus].label}`}</Badge>
+                ) : i.kind === 'ugc' ? (
+                  <Badge tone="live">{`+$${(i.earnedCents / 100).toFixed(2)} · UGC approved`}</Badge>
+                ) : i.valid ? (
+                  <Badge tone="good">+${(i.earnedCents / 100).toFixed(2)}</Badge>
+                ) : (
+                  <Badge tone="bad">Not paid: face out of frame</Badge>
+                )}
+              </Card>
+            ))}
+          </View>
         )}
       </ScrollView>
     </Screen>
