@@ -12,9 +12,9 @@ SplashScreen.preventAutoHideAsync();
 const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, { unsavedChangesWarning: false });
 
 function Gate() {
-  const { ready, userId, groupId } = useSession();
+  const { ready, userId } = useSession();
   if (!ready) return null;
-  if (!userId || !groupId) return <Onboarding />;
+  if (!userId) return <Onboarding />;
   return <AppTabs />;
 }
 
