@@ -16,6 +16,8 @@ export default defineSchema({
     email: v.optional(v.string()),
     school: v.optional(v.string()), // derived from domain, e.g. berkeley.edu → Berkeley
     verifiedStudent: v.optional(v.boolean()), // set only after the emailed code is confirmed (verify.ts)
+    demoPass: v.optional(v.boolean()), // verified via the judges' demo pass instead of a .edu (verify.demoPass)
+    role: v.optional(v.union(v.literal("student"), v.literal("brand"))), // picked at onboarding
   })
     .index("by_handle", ["handle"])
     .index("by_email", ["email"]),

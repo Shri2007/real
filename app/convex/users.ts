@@ -26,10 +26,11 @@ export const create = mutation({
     name: v.string(),
     color: v.string(),
     email: v.optional(v.string()),
+    role: v.optional(v.union(v.literal("student"), v.literal("brand"))),
   },
   // email is accepted for compatibility but no longer verifies anything: the app runs verify.start/confirm (emailed code).
   handler: async (ctx, args) =>
-    ctx.db.insert("users", { name: args.name.trim(), color: args.color, balanceCents: 0 }),
+    ctx.db.insert("users", { name: args.name.trim(), color: args.color, balanceCents: 0, role: args.role }),
 });
 
 export const get = query({
