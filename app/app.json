@@ -1,28 +1,28 @@
 {
   "expo": {
-    "name": "OPEN MIC",
+    "name": "REAL",
     "slug": "app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "app",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.shri.openmic",
+      "bundleIdentifier": "com.shri.real",
       "infoPlist": {
-        "NSCameraUsageDescription": "OPEN MIC checks if you really laughed while you hold to view. Nothing is recorded unless you laugh."
+        "NSCameraUsageDescription": "REAL uses the front camera while you watch a clip to verify a real human watched. Nothing is recorded unless you choose to send a reaction."
       }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0B0D12",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.shri.openmic"
+      "package": "com.shri.real"
     },
     "web": {
       "output": "server",
@@ -33,9 +33,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#0B0D12",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 200
         }
       ]
     ],
