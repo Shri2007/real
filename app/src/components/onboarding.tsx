@@ -4,6 +4,8 @@ import { Pressable, TextInput, View } from 'react-native';
 
 import { api } from '../../convex/_generated/api';
 import { useSession } from '@/lib/session';
+import { InterestPicker } from '@/components/InterestPicker';
+import { Id } from '../../convex/_generated/dataModel';
 import {
   Avatar,
   Badge,
@@ -29,7 +31,7 @@ function previewEdu(raw: string) {
   const withoutEdu = domain.slice(0, -'.edu'.length);
   const label = withoutEdu.split('.').filter(Boolean).pop();
   if (!label) return null;
-  return label.charAt(0).toUpperCase() + label.slice(1);
+  return label.length <= 4 ? label.toUpperCase() : label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 // Name + color (+ optional .edu). Same account can post gigs and react.
@@ -40,9 +42,12 @@ export function Onboarding() {
   const [email, setEmail] = useState('');
   const [color, setColor] = useState(COLORS[0]);
   const [busy, setBusy] = useState(false);
+  const [created, setCreated] = useState<Id<'users'> | null>(null);
 
   const schoolPreview = useMemo(() => previewEdu(email), [email]);
   const canContinue = name.trim().length > 0 && !busy;
+
+  if (created) return <InterestPicker userId={created} onDone={() => setUserId(created)} />;
 
   return (
     <Screen style={{ justifyContent: 'center', gap: tokens.space.lg }}>
@@ -142,7 +147,7 @@ export function Onboarding() {
                 color,
                 ...(trimmedEmail ? { email: trimmedEmail } : {}),
               });
-              setUserId(userId);
+              setCreated(userId);
             } finally {
               setBusy(false);
             }

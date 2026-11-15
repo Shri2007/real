@@ -123,3 +123,99 @@ export const status = httpAction(async (ctx, req) => {
   if (!handle || handle.length > 256) return json({ error: 'handle is required' }, 400);
   return json({ gigs: await ctx.runQuery(statusRef, { handle }) });
 });
+
+// ---- UGC + inbox tools for the REAL agent (brands post UGC jobs, review submissions, and catch up by text) ----
+type Pending = { claimId: Id<'ugcClaims'>; title: string; student: string; school: string | null; videoUrl: string | null };
+const userByHandleRef = makeFunctionReference<'query', { handle: string }, Id<'users'> | null>('keiki:userByHandle');
+const pendingRef = makeFunctionReference<'query', { handle: string }, Pending[]>('keiki:pendingUgc');
+const inboxRef = makeFunctionReference<'mutation', { handle: string }, string[]>('keiki:readInbox');
+const normalizeClaimRef = makeFunctionReference<'query', { claimId: string }, Id<'ugcClaims'> | null>('keiki:normalizeClaim');
+const ugcCheckoutRef = makeFunctionReference<'action', { oppId: Id<'ugcOpps'> }, { url: string; totalCents: number }>('payments:createUgcCheckout');
+
+export const userByHandle = internalQuery({
+  args: { handle: v.string() }, returns: v.union(v.id('users'), v.null()),
+  handler: async (ctx, { handle }) => (await ctx.db.query('users').withIndex('by_handle', q => q.eq('handle', handle)).unique())?._id ?? null,
+});
+export const normalizeClaim = internalQuery({
+  args: { claimId: v.string() }, returns: v.union(v.id('ugcClaims'), v.null()),
+  handler: async (ctx, { claimId }) => ctx.db.normalizeId('ugcClaims', claimId),
+});
+export const pendingUgc = internalQuery({
+  args: { handle: v.string() },
+  returns: v.array(v.object({ claimId: v.id('ugcClaims'), title: v.string(), student: v.string(), school: v.union(v.string(), v.null()), videoUrl: v.union(v.string(), v.null()) })),
+  handler: async (ctx, { handle }) => {
+    const user = await ctx.db.query('users').withIndex('by_handle', q => q.eq('handle', handle)).unique();
+    if (!user) return [];
+    const out: Pending[] = [];
+    const opps = (await ctx.db.query('ugcOpps').withIndex('by_status', q => q.eq('status', 'open')).take(200))
+      .concat(await ctx.db.query('ugcOpps').withIndex('by_status', q => q.eq('status', 'closed')).take(200))
+      .filter(o => o.brandId === user._id);
+    for (const o of opps) {
+      for (const c of await ctx.db.query('ugcClaims').withIndex('by_oppId', q => q.eq('oppId', o._id)).take(50)) {
+        if (c.status !== 'submitted') continue;
+        const s = await ctx.db.get(c.userId);
+        out.push({ claimId: c._id, title: o.title, student: s?.name ?? '?', school: s?.school ?? null, videoUrl: c.videoStorageId ? await ctx.storage.getUrl(c.videoStorageId) : null });
+      }
+    }
+    return out;
+  },
+});
+export const readInbox = internalMutation({
+  args: { handle: v.string() }, returns: v.array(v.string()),
+  handler: async (ctx, { handle }) => {
+    const user = await ctx.db.query('users').withIndex('by_handle', q => q.eq('handle', handle)).unique();
+    if (!user) return [];
+    const unread = await ctx.db.query('notifications').withIndex('by_userId_and_read', q => q.eq('userId', user._id).eq('read', false)).take(20);
+    for (const n of unread) await ctx.db.patch(n._id, { read: true });
+    return unread.map(n => n.text);
+  },
+});
+
+// POST /keiki/ugc {handle, brief, payoutCents?, spots?, gigId?} → creates a UGC job and returns the Whop pay link.
+export const createUgc = httpAction(async (ctx, req) => {
+  if (!authorized(req)) return json({ error: 'Unauthorized' }, 401);
+  let b: Record<string, unknown>;
+  try { b = await req.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+  if (typeof b.handle !== 'string' || !b.handle.trim() || typeof b.brief !== 'string' || !b.brief.trim() || b.brief.length > 1000) return json({ error: 'Supply handle and brief' }, 400);
+  const payoutCents = b.payoutCents ?? 2500; const spots = b.spots ?? 3;
+  if (typeof payoutCents !== 'number' || !Number.isInteger(payoutCents) || payoutCents < 100 || payoutCents > 100000 || typeof spots !== 'number' || !Number.isInteger(spots) || spots < 1 || spots > 50) return json({ error: 'Use payoutCents 100–100000 and 1–50 spots' }, 400);
+  const gigId = typeof b.gigId === 'string' ? await ctx.runQuery(normalizeRef, { gigId: b.gigId }) : null;
+  const brandId = await ctx.runMutation(creatorRef, { handle: b.handle.trim() });
+  const gig = gigId ? await ctx.runQuery(api.gigs.get, { gigId }) : null;
+  const oppId = await ctx.runMutation(api.ugc.create, { brandId, ...(gigId ? { gigId } : {}), title: gig ? `Make a video for ${gig.title}` : 'UGC video', brief: b.brief.trim(), payoutCents, spots });
+  try {
+    const { url, totalCents } = await ctx.runAction(ugcCheckoutRef, { oppId });
+    return json({ oppId, payUrl: url, totalCents });
+  } catch {
+    return json({ oppId, live: false, error: 'Checkout unavailable. Do not recreate this job; try again later.' }, 502);
+  }
+});
+
+// GET /keiki/ugc?handle=... → UGC videos waiting for this brand's review.
+export const ugcPending = httpAction(async (ctx, req) => {
+  if (!authorized(req)) return json({ error: 'Unauthorized' }, 401);
+  const handle = new URL(req.url).searchParams.get('handle')?.trim();
+  if (!handle) return json({ error: 'handle is required' }, 400);
+  return json({ pending: await ctx.runQuery(pendingRef, { handle }) });
+});
+
+// POST /keiki/ugc/review {handle, claimId, approve} → approve (pays the student) or pass.
+export const ugcReview = httpAction(async (ctx, req) => {
+  if (!authorized(req)) return json({ error: 'Unauthorized' }, 401);
+  let b: Record<string, unknown>;
+  try { b = await req.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+  if (typeof b.handle !== 'string' || typeof b.claimId !== 'string' || typeof b.approve !== 'boolean') return json({ error: 'Supply handle, claimId and approve' }, 400);
+  const [brandId, claimId] = await Promise.all([ctx.runQuery(userByHandleRef, { handle: b.handle.trim() }), ctx.runQuery(normalizeClaimRef, { claimId: b.claimId })]);
+  if (!brandId || !claimId) return json({ error: 'Unknown handle or claim' }, 404);
+  try { await ctx.runMutation(api.ugc.review, { claimId, brandId, approve: b.approve }); }
+  catch (e) { return json({ error: e instanceof Error ? e.message : 'Review failed' }, 400); }
+  return json({ ok: true, approved: b.approve });
+});
+
+// GET /keiki/inbox?handle=... → unread updates (test finished, UGC submitted), marked read.
+export const inbox = httpAction(async (ctx, req) => {
+  if (!authorized(req)) return json({ error: 'Unauthorized' }, 401);
+  const handle = new URL(req.url).searchParams.get('handle')?.trim();
+  if (!handle) return json({ error: 'handle is required' }, 400);
+  return json({ updates: await ctx.runMutation(inboxRef, { handle }) });
+});

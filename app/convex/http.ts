@@ -8,6 +8,10 @@ const http = httpRouter();
 http.route({ path: '/keiki/gig', method: 'POST', handler: keiki.createGig });
 http.route({ path: '/keiki/results', method: 'GET', handler: keiki.results });
 http.route({ path: '/keiki/status', method: 'GET', handler: keiki.status });
+http.route({ path: '/keiki/ugc', method: 'POST', handler: keiki.createUgc });
+http.route({ path: '/keiki/ugc', method: 'GET', handler: keiki.ugcPending });
+http.route({ path: '/keiki/ugc/review', method: 'POST', handler: keiki.ugcReview });
+http.route({ path: '/keiki/inbox', method: 'GET', handler: keiki.inbox });
 
 http.route({ path: '/whop/webhook', method: 'POST', handler: whopWebhook });
 

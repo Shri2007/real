@@ -1,11 +1,11 @@
 import { useMutation, useQuery } from 'convex/react';
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, TextInput, View } from 'react-native';
 import { FeedCard } from '@/components/foryou/FeedCard';
 import { MyUgc } from '@/components/foryou/MyUgc';
 import { Watch } from '@/components/react/Watch';
 import { useSession } from '@/lib/session';
-import { Badge, Body, Button, EmptyState, Muted, Screen, Title, tokens } from '@/ui';
+import { Badge, Body, Button, Card, EmptyState, Muted, Screen, Title, VerifiedStudentBadge, tokens } from '@/ui';
 import { api } from '../../convex/_generated/api';
 import { Id } from '../../convex/_generated/dataModel';
 
@@ -16,6 +16,10 @@ export default function ForYouScreen() {
   const taste = useQuery(api.prefs.taste, userId ? { userId } : 'skip');
   const swipe = useMutation(api.prefs.swipe);
   const claim = useMutation(api.ugc.claim);
+  const me = useQuery(api.users.get, userId ? { userId } : 'skip');
+  const verify = useMutation(api.users.verify);
+  const [email, setEmail] = useState('');
+  const [askVerify, setAskVerify] = useState(false);
   const [tab, setTab] = useState<'feed' | 'mine'>('feed');
   const [watching, setWatching] = useState<Id<'gigs'> | null>(null);
   const [error, setError] = useState('');
@@ -57,7 +61,20 @@ export default function ForYouScreen() {
             if (top.kind === 'clip' && top.gigId) setWatching(top.gigId);
             if (top.kind === 'ugc' && top.oppId) { await claim({ oppId: top.oppId, userId }); setTab('mine'); }
           })}
+          locked={top.kind === 'ugc' && !me?.verifiedStudent}
+          onLocked={() => setAskVerify(true)}
         />
+        {askVerify && !me?.verifiedStudent && <Card style={{ gap: tokens.space.sm }}>
+          <Body>UGC jobs are for verified students</Body>
+          <Muted>Add your school email. Brands pay for verified Gen Z.</Muted>
+          <TextInput accessibilityLabel="School email" placeholder="you@school.edu" placeholderTextColor={tokens.muted} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address"
+            style={{ color: tokens.text, borderColor: tokens.cardBorder, borderWidth: 1, borderRadius: tokens.radiusSm, padding: tokens.space.md, fontSize: tokens.type.body }} />
+          <Button label="Verify" disabled={!email.trim()} onPress={async () => {
+            setError('');
+            try { await verify({ userId, email }); setAskVerify(false); } catch (e) { setError(e instanceof Error && /\.edu/.test(e.message) ? 'Use your school email ending in .edu' : 'Could not verify. Try again.'); }
+          }} />
+        </Card>}
+        {me?.verifiedStudent && top.kind === 'ugc' && <VerifiedStudentBadge school={me.school} />}
         <Muted>{feed.length - 1} more in your feed</Muted>
       </>}
       {!!error && <Body>{error}</Body>}

@@ -76,8 +76,11 @@ export default defineSchema({
     payoutCents: v.number(),
     spots: v.number(),
     claimed: v.number(),
-    status: v.union(v.literal("open"), v.literal("closed")),
+    status: v.union(v.literal("draft"), v.literal("open"), v.literal("closed")), // draft until funded via Whop (UGC credits)
     tags: v.optional(v.array(v.string())),
+    funded: v.optional(v.boolean()),
+    whopCheckoutId: v.optional(v.string()),
+    whopPaymentId: v.optional(v.string()),
   })
     .index("by_status", ["status"])
     .index("by_gigId", ["gigId"]),
@@ -91,6 +94,13 @@ export default defineSchema({
     .index("by_oppId", ["oppId"])
     .index("by_userId", ["userId"])
     .index("by_oppId_and_userId", ["oppId", "userId"]),
+
+  // Updates for a creator/brand: shown in-app and readable by the Keiki agent (GET /keiki/inbox), pushed to Keiki when configured.
+  notifications: defineTable({
+    userId: v.id("users"),
+    text: v.string(),
+    read: v.boolean(),
+  }).index("by_userId_and_read", ["userId", "read"]),
 
   // Reactor cash-out requests (paid out via Whop).
   payouts: defineTable({

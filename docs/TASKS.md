@@ -144,3 +144,20 @@ Read AGENTS.md and docs/TASKS.md. You own convex/. Keep the API contract stable 
 4. Creator screen: the curve fills in live, "2 of 3 laughed at 0:04," reactors paid.
 5. AI report: "cut the first 2 seconds."
 6. "We pay for attention, not applause. REAL: know what lands before you post."
+
+## Demo setup + Keiki tools (added by capy/demo-ready)
+**Seed the stage (once, after `npx convex dev --once`):**
+```
+npx convex run seed:demo '{"ownerName":"<the name you onboarded with on the brand phone>"}'
+```
+Creates 8 brands, 12 tagged live clips, 4 funded UGC jobs, and one finished test ("Volt: 5am gym ad") with 5 verified reactors, a laugh curve and quotes. `ownerName` makes Volt's content yours, so it shows in your Create tab. Pass `"videoUrls": [...]` to use your own clips. It refuses to run twice.
+
+**New Keiki agent tools** (add them to the REAL agent with the Keiki MCP, same `x-real-secret` header as the existing ones):
+| Tool | Route | Use |
+|---|---|---|
+| create_ugc_job | `POST /keiki/ugc` `{handle, brief, payoutCents?, spots?, gigId?}` → `{oppId, payUrl}` | "Get 3 students to make a video for this, $25 each" → text back the Whop link |
+| pending_ugc | `GET /keiki/ugc?handle=` → `{pending:[{claimId, title, student, school, videoUrl}]}` | "any UGC in?" → send the video links |
+| review_ugc | `POST /keiki/ugc/review` `{handle, claimId, approve}` | "approve" / "pass" |
+| inbox | `GET /keiki/inbox?handle=` → `{updates:[...]}` | Check at the start of every conversation and relay updates (test finished, UGC submitted) |
+
+Optional push: set `KEIKI_API_KEY` (+ `KEIKI_API_BASE`, `KEIKI_AGENT` if not the defaults) and updates are also sent into the creator's Keiki conversation through the API gateway (needs the gateway turned on).

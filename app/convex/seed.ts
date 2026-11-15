@@ -1,0 +1,132 @@
+import { v } from "convex/values";
+import { internalAction, internalMutation } from "./_generated/server";
+import { internal } from "./_generated/api";
+import { Id } from "./_generated/dataModel";
+
+// Demo content so the For you feed feels like a feed on stage: ~12 tagged clips from 8 brands, funded UGC
+// opportunities, and one finished test with verified reactions + quotes. Run once:
+//   npx convex run seed:demo
+//   npx convex run seed:demo '{"ownerName":"Vishnu"}'   (brand content owned by that user, so their Create tab shows it)
+//   npx convex run seed:demo '{"videoUrls":["https://…/our-clip.mp4"]}'   (use your own clips)
+
+const SAMPLE_VIDEOS = [
+  "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4",
+  "https://test-videos.co.uk/vids/jellyfish/mp4/h264/360/Jellyfish_360_10s_1MB.mp4",
+  "https://test-videos.co.uk/vids/sintel/mp4/h264/360/Sintel_360_10s_1MB.mp4",
+  "https://download.samplelib.com/mp4/sample-5s.mp4",
+  "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+];
+
+const BRANDS = [
+  { handle: "seed:volt", name: "Volt Energy", color: "#FFB020" },
+  { handle: "seed:glowlab", name: "GlowLab", color: "#FF6B7A" },
+  { handle: "seed:campusbites", name: "Campus Bites", color: "#2EE59A" },
+  { handle: "seed:studypal", name: "StudyPal", color: "#5B8CFF" },
+  { handle: "seed:threadbare", name: "Threadbare", color: "#C9B8FF" },
+  { handle: "seed:loopbeats", name: "LoopBeats", color: "#5AC8FA" },
+  { handle: "seed:pawpals", name: "PawPals", color: "#FFB020" },
+  { handle: "seed:pixelarcade", name: "Pixel Arcade", color: "#5B8CFF" },
+];
+
+const GIGS = [
+  { brand: 0, title: "Volt: 5am gym ad", question: "Would this make you grab a can before a lift?", tags: ["energy drinks", "gym"] },
+  { brand: 0, title: "Volt: finals-week skit", question: "Is the ending funny?", tags: ["energy drinks", "comedy", "study"] },
+  { brand: 1, title: "GlowLab serum before/after", question: "Do you trust this result?", tags: ["skincare"] },
+  { brand: 1, title: "GlowLab GRWM for a night out", question: "Would you try this routine?", tags: ["skincare", "fashion"] },
+  { brand: 2, title: "Campus Bites: $6 dorm bowl", question: "Would you order this tonight?", tags: ["food"] },
+  { brand: 2, title: "Campus Bites roommate prank", question: "Does the joke land?", tags: ["food", "comedy"] },
+  { brand: 3, title: "StudyPal: cram with AI", question: "Would this actually help you study?", tags: ["study", "tech"] },
+  { brand: 4, title: "Threadbare thrift haul", question: "Which fit would you wear?", tags: ["fashion"] },
+  { brand: 5, title: "LoopBeats: make a beat in 30s", question: "Would you download this?", tags: ["music", "tech"] },
+  { brand: 6, title: "PawPals: dog reacts to new toy", question: "Is this cute or cringe?", tags: ["pets", "comedy"] },
+  { brand: 7, title: "Pixel Arcade launch trailer", question: "Would you play this?", tags: ["gaming", "tech"] },
+  { brand: 0, title: "Volt: spring break road trip", question: "Does this feel like your trip?", tags: ["travel", "energy drinks"] },
+];
+
+const UGC = [
+  { brand: 0, gig: 0, brief: "15s gym-bag check: show your pre-lift routine with a can of Volt. Natural, no script.", payoutCents: 2500, spots: 3 },
+  { brand: 1, gig: 3, brief: "Get ready with me using the GlowLab serum. Say honestly how your skin feels after.", payoutCents: 4000, spots: 2 },
+  { brand: 2, gig: 4, brief: "Order the $6 dorm bowl and give a 20s honest first-bite review.", payoutCents: 2000, spots: 4 },
+  { brand: 3, gig: 6, brief: "Show your finals-week study setup and how you'd use StudyPal.", payoutCents: 3000, spots: 3 },
+];
+
+const REACTORS = [
+  { name: "Maya", color: "#2EE59A", school: "Berkeley", taste: "gym", laugh: [3, 4, 5], why: "the alarm bit got me, I'd grab a can", sentiment: "pos" as const, tags: ["funny opening", "relatable"] },
+  { name: "Jordan", color: "#5B8CFF", school: "Stanford", taste: "gym", laugh: [4, 5], why: "funny but the logo shows up way too late", sentiment: "mixed" as const, tags: ["late branding"] },
+  { name: "Priya", color: "#FF6B7A", school: "Berkeley", taste: "skincare", laugh: [], why: "not really for me, too intense", sentiment: "neg" as const, tags: ["too intense"] },
+  { name: "Leo", color: "#FFB020", school: "UCLA", taste: "gaming", laugh: [4], why: "lost me in the first two seconds, then it got good", sentiment: "mixed" as const, tags: ["slow intro"] },
+  { name: "Ava", color: "#C9B8FF", school: "Stanford", taste: "gym", laugh: [3, 4, 5, 6], why: "this is literally me at 5am", sentiment: "pos" as const, tags: ["relatable"] },
+];
+
+export const insertAll = internalMutation({
+  args: { ownerName: v.optional(v.string()), videos: v.array(v.id("_storage")) },
+  returns: v.object({ gigs: v.number(), opps: v.number(), reactions: v.number() }),
+  handler: async (ctx, { ownerName, videos }) => {
+    const already = await ctx.db.query("users").withIndex("by_handle", (q) => q.eq("handle", BRANDS[0].handle)).unique();
+    if (already) throw new Error("Demo data is already seeded");
+    const owner = ownerName
+      ? (await ctx.db.query("users").order("desc").take(200)).find((u) => u.name.toLowerCase() === ownerName.toLowerCase())
+      : undefined;
+    if (ownerName && !owner) throw new Error(`No user named ${ownerName}. Onboard on the phone first.`);
+    const brandIds: Id<"users">[] = [];
+    for (const b of BRANDS) brandIds.push(await ctx.db.insert("users", { ...b, balanceCents: 0 }));
+    const brandFor = (i: number) => (owner && i === 0 ? owner._id : brandIds[i]);
+
+    const gigIds: Id<"gigs">[] = [];
+    for (const [i, g] of GIGS.entries()) {
+      gigIds.push(
+        await ctx.db.insert("gigs", {
+          creatorId: brandFor(g.brand), title: g.title, question: g.question, tags: g.tags,
+          videoStorageId: videos[i % videos.length], durationMs: 10000, priceCents: 50, slots: 10,
+          filled: 0, status: "live", paid: true,
+        }),
+      );
+    }
+    for (const u of UGC) {
+      await ctx.db.insert("ugcOpps", {
+        brandId: brandFor(u.brand), gigId: gigIds[u.gig], title: `Make a video for ${BRANDS[u.brand].name}`, brief: u.brief,
+        payoutCents: u.payoutCents, spots: u.spots, claimed: 0, status: "open", funded: true, tags: GIGS[u.gig].tags,
+      });
+    }
+
+    // One test with results already in: verified reactors, a laugh curve, and quotes.
+    const gig = gigIds[0];
+    for (const r of REACTORS) {
+      const reactorId = await ctx.db.insert("users", {
+        name: r.name, color: r.color, balanceCents: 50, school: r.school, verifiedStudent: true,
+        email: `${r.name.toLowerCase()}@${r.school.toLowerCase()}.edu`, taste: [{ tag: r.taste, w: 4 }],
+      });
+      const curve = Array.from({ length: 100 }, (_, i) => {
+        const sec = Math.floor(i / 10);
+        const s = (r.laugh as number[]).includes(sec) ? 0.55 + 0.3 * Math.sin((i % 10) / 3) : 0.08 + 0.06 * Math.sin(i / 4);
+        return { t: i * 100, s: Math.max(0, Math.min(1, s)) };
+      });
+      const peak = Math.max(...curve.map((p) => p.s));
+      await ctx.db.insert("reactions", {
+        gigId: gig, reactorId, curve, peak, laughed: peak >= 0.45, facePresentPct: 100, watchedToEnd: true, valid: true, earnedCents: 50,
+        whyText: r.why, whyQuote: r.why, whyTags: r.tags, whySentiment: r.sentiment,
+      });
+    }
+    await ctx.db.patch(gig, { filled: REACTORS.length });
+    return { gigs: gigIds.length, opps: UGC.length, reactions: REACTORS.length };
+  },
+});
+
+export const demo = internalAction({
+  args: { ownerName: v.optional(v.string()), videoUrls: v.optional(v.array(v.string())) },
+  returns: v.object({ gigs: v.number(), opps: v.number(), reactions: v.number() }),
+  handler: async (ctx, { ownerName, videoUrls }): Promise<{ gigs: number; opps: number; reactions: number }> => {
+    const videos: Id<"_storage">[] = [];
+    for (const url of videoUrls?.length ? videoUrls : SAMPLE_VIDEOS) {
+      try {
+        const res = await fetch(url, { redirect: "follow" });
+        if (!res.ok) throw new Error(`${res.status}`);
+        videos.push(await ctx.storage.store(new Blob([await res.arrayBuffer()], { type: "video/mp4" })));
+      } catch (e) {
+        console.error(`Skipping ${url}: ${e}`);
+      }
+    }
+    if (!videos.length) throw new Error("Could not download any demo video");
+    return ctx.runMutation(internal.seed.insertAll, { ownerName, videos });
+  },
+});

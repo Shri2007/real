@@ -21,7 +21,7 @@ function Preview({ uri }: { uri: string }) {
 }
 
 // One card at a time: drag right (want it) or left (not for me), or use the buttons.
-export function FeedCard({ item, onLeft, onRight, onPrimary }: { item: Item; onLeft: () => void; onRight: () => void; onPrimary: () => void }) {
+export function FeedCard({ item, onLeft, onRight, onPrimary, locked, onLocked }: { item: Item; onLeft: () => void; onRight: () => void; onPrimary: () => void; locked?: boolean; onLocked?: () => void }) {
   const x = useRef(new Animated.Value(0)).current;
   const fly = (dir: 1 | -1, done: () => void) => Animated.timing(x, { toValue: dir * 600, duration: 180, useNativeDriver: true }).start(done);
   const pan = useRef(PanResponder.create({
@@ -51,7 +51,9 @@ export function FeedCard({ item, onLeft, onRight, onPrimary }: { item: Item; onL
         <Money cents={item.cents} />
         <Muted>{ugc ? `per approved video · ${item.spotsLeft} spots left` : `to react · ${item.spotsLeft} spots left`}</Muted>
       </View>
-      <Button label={ugc ? 'Pick this: I\'ll make it' : 'Watch & earn'} onPress={() => fly(1, onPrimary)} />
+      {locked
+        ? <Button label="Verify your .edu to pick this" onPress={onLocked} />
+        : <Button label={ugc ? 'Pick this: I\'ll make it' : 'Watch & earn'} onPress={() => fly(1, onPrimary)} />}
       <View style={mediaLayout.actions}>
         <Button label="✕ Not for me" variant="secondary" onPress={() => fly(-1, onLeft)} style={{ flex: 1 }} />
         <Button label="♥ More like this" variant="secondary" onPress={() => fly(1, onRight)} style={{ flex: 1 }} />

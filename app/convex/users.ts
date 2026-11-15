@@ -16,7 +16,7 @@ export function parseEduEmail(raw: string | undefined): {
   const withoutEdu = domain.slice(0, -".edu".length);
   const label = withoutEdu.split(".").filter(Boolean).pop();
   if (!label) return { email };
-  const school = label.charAt(0).toUpperCase() + label.slice(1);
+  const school = label.length <= 4 ? label.toUpperCase() : label.charAt(0).toUpperCase() + label.slice(1);
   return { email, school, verifiedStudent: true };
 }
 
@@ -35,6 +35,17 @@ export const create = mutation({
       balanceCents: 0,
       ...edu,
     });
+  },
+});
+
+// Add or change a school email later (e.g. to unlock UGC jobs). Domain check only, same as onboarding.
+export const verify = mutation({
+  args: { userId: v.id("users"), email: v.string() },
+  handler: async (ctx, { userId, email }) => {
+    const edu = parseEduEmail(email);
+    if (!edu.verifiedStudent) throw new Error("Use your school email ending in .edu");
+    await ctx.db.patch(userId, edu);
+    return edu.school ?? null;
   },
 });
 

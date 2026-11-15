@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { bumpTaste } from "./prefs";
+import { notify } from "./notify";
 
 export const LAUGH_THRESHOLD = 0.45;
 const MIN_FACE_PCT = 70; // must be watching (face visible) at least 70% of the clip to be paid
@@ -46,7 +47,10 @@ export const submit = mutation({
     if (valid) {
       const filled = gig.filled + 1;
       await ctx.db.patch(gig._id, { filled, status: filled >= gig.slots ? "done" : gig.status });
-      if (filled >= gig.slots) await ctx.scheduler.runAfter(30000, internal.report.generateForGig, { gigId: gig._id });
+      if (filled >= gig.slots) {
+        await ctx.scheduler.runAfter(30000, internal.report.generateForGig, { gigId: gig._id });
+        await notify(ctx, gig.creatorId, `"${gig.title}" is done: ${filled} verified reactions are in. Ask "how did it do?" for the results and what to fix.`);
+      }
       const reactor = await ctx.db.get(args.reactorId);
       if (reactor) await ctx.db.patch(reactor._id, { balanceCents: reactor.balanceCents + earnedCents });
       await bumpTaste(ctx, args.reactorId, gig.tags, laughed ? 1 : 0);
