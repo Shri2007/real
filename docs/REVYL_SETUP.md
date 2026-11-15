@@ -1,24 +1,44 @@
-# Revyl setup: what's done, what's left
+# Revyl: how to run it (and fix it when it breaks)
 
-## Done (Nov 14 night)
-- Revyl CLI v0.2.12 installed (Homebrew) and signed in (org: Berkeley, persistent key).
-- Revyl agent skills installed in this repo for Claude Code (`.claude/skills/`), Cursor and Codex (`.agents/skills/`): dev loop, create tests, auth bypass, Atlas, cross-platform review, and more.
+The Revyl project lives in **`app/`** (`app/.revyl/config.yaml`, test in `app/.revyl/tests/real-core-flow.yaml`). Run every `revyl` command from `app/`, or pass `-C app`. From the repo root, `revyl doctor` reports "Not in a Git worktree / Build System: Not detected", which is the most common reason the CLI "doesn't work".
 
-## Left for 10:20 AM (needs the Expo app, which can't exist before 10:00)
-Run this in Claude Code from `app/` once `create-expo-app` has run and the app opens on a phone:
+## 1. Install + sign in (once per machine)
+```bash
+curl -fsSL https://revyl.com/install.sh | sh
+export PATH="$HOME/.revyl/bin:$PATH"     # add to ~/.zshrc so new terminals find it
+revyl auth login                          # prints a link: open it, sign in, approve
+revyl auth status                         # should say authenticated
+```
+For a CI or agent machine: put an API key from the Revyl dashboard in `REVYL_API_KEY` and run `revyl auth persist-cloud-env`.
 
-> Fetch and execute the instructions at https://revyl.com/agent-setup/prompt.md?src=device_auth&ref=4d2b714aced1f155d757ed6c. Step 1 is already done (installed, signed in, skills installed). Start at step 2 with project root `app/` (Expo).
+## 2. Health check
+```bash
+cd app
+revyl doctor            # API, auth, project config, build system
+revyl config validate   # local + connected validation of .revyl/config.yaml
+revyl billing status    # free build/device minutes left (out of minutes = builds fail fast)
+```
 
-That walks through:
-2. Project root = `app/` (Expo).
-3. `revyl init -y` → `.revyl/config.yaml`.
-4. A `preview` build profile: Expo native recipe (`expo prebuild` + Xcode) for a **simulator `.app`**, no `EXPO_TOKEN` needed. App ID from `revyl app create --platform ios`.
-5. Turn on Proof of Changes (`pr_review.enabled`, `proof_of_changes.enabled`). We have no sign-in screens (name-only onboarding), so no auth bypass is needed.
-6. `revyl github connect`. **Shri installs the Revyl GitHub App on `Shri2007/yc-hacks-open-mic`** (only you can approve it).
-7. `revyl build --profile preview --platform ios --remote --json` (Revyl's cloud builder, so we don't wait on local Xcode).
-8. `revyl config validate` → `revyl config push`.
-9–11. `revyl device start --app-id <id> --open`, then the dev loop: `revyl dev --platform ios --detach --json`.
+## 3. Read a failed PR build
+The PR check "Revyl preview builds" links to `app.revyl.ai/.../builds/<build-job-id>#logs`. With the CLI:
+```bash
+revyl build status <build-job-id>          # status + recent logs
+revyl build status <build-job-id> --debug --json
+```
+A failure in under about a minute never reached Xcode: it's setup (npm install / prebuild / pod install), billing or capacity. Check `revyl billing status` first.
 
-**Payoff for judges:** Revyl builds every PR (including Capy's `capy/*` PRs), runs the app on a cloud iPhone, and posts a verdict with screenshots on the PR. That's Revyl and Capy visibly working together.
+## 4. Push the test and run it
+```bash
+revyl test push real-core-flow                        # uploads app/.revyl/tests/real-core-flow.yaml
+revyl build --profile preview --platform ios --remote  # fresh cloud build of the current branch
+revyl test run real-core-flow                          # runs it on a cloud iPhone
+```
+The test signs up as a student with the demo pass `yc2026`, picks 3 interests, then watches the first clip on the React tab. It needs the dev backend seeded (`seed:demo` + `seed:moreUgc`).
 
-Budget: 30 min, run in the background while the core loop gets built.
+## 5. Reproduce the build steps locally (no Revyl account needed)
+```bash
+cd app && npm install
+npx expo prebuild --platform ios --no-install --clean   # same as Revyl's setup step
+npx expo export --platform ios                          # proves the JS bundles
+# macOS only: cd ios && pod install && xcodebuild ... (see .revyl/config.yaml)
+```
