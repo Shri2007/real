@@ -156,12 +156,21 @@ export const webhook = httpAction(async (ctx, req) => {
   const id = req.headers.get("webhook-id") ?? "";
   const ts = req.headers.get("webhook-timestamp") ?? "";
   const sig = req.headers.get("webhook-signature") ?? "";
-  if (!secret || !(await verify(secret, id, ts, body, sig))) return new Response("Invalid signature", { status: 401 });
-  const event = JSON.parse(body) as { type?: string; data?: { id?: string; metadata?: Record<string, unknown> | null } };
-  const meta = event.data?.metadata ?? {};
+  const sigOk = !!secret && (await verify(secret, id, ts, body, sig));
+  let peek: { type?: string; metaKeys?: string[]; checkoutMeta?: string[] } = {};
+  try {
+    const e = JSON.parse(body);
+    peek = { type: e?.type, metaKeys: Object.keys(e?.data?.metadata ?? {}), checkoutMeta: Object.keys(e?.data?.checkout_configuration?.metadata ?? e?.data?.plan?.metadata ?? {}) };
+  } catch { /* not JSON */ }
+  console.log("[whop/webhook] received", { hasSecret: !!secret, hasSigHeaders: !!(id && ts && sig), sigOk, ...peek });
+  if (!sigOk) return new Response("Invalid signature", { status: 401 });
+  const event = JSON.parse(body) as { type?: string; data?: { id?: string; metadata?: Record<string, unknown> | null; checkout_configuration?: { metadata?: Record<string, unknown> | null } } };
+  // Whop may put our metadata on the payment, or on the checkout configuration it came from.
+  const meta = { ...(event.data?.checkout_configuration?.metadata ?? {}), ...(event.data?.metadata ?? {}) };
   const gigId = typeof meta.gigId === "string" ? meta.gigId : undefined;
   const oppId = typeof meta.oppId === "string" ? meta.oppId : undefined;
-  if (event.type === "payment.succeeded" && (gigId || oppId)) {
+  console.log("[whop/webhook] event", { type: event.type, gigId: gigId ?? null, oppId: oppId ?? null });
+  if ((event.type === "payment.succeeded" || event.type === "payment_succeeded") && (gigId || oppId)) {
     await ctx.runMutation(internal.payments.markPaid, { gigId, oppId, whopPaymentId: event.data?.id ?? "" });
   }
   return new Response("OK", { status: 200 });
