@@ -241,11 +241,13 @@ export const feed = query({
   },
 });
 
+const tasteTag = v.object({ tag: v.string(), w: v.number() });
+
 export const taste = query({
   args: { userId: v.id("users") },
   returns: v.object({
-    liked: v.array(v.string()),
-    disliked: v.array(v.string()),
+    liked: v.array(tasteTag),
+    disliked: v.array(tasteTag),
     signals: v.number(),
     unlockAt: v.number(),
     ugcMatches: v.number(),
@@ -254,8 +256,8 @@ export const taste = query({
     const { user, signals, matchedOpps } = await studentState(ctx, userId);
     const t = (user as Doc<"users"> | null)?.taste ?? [];
     return {
-      liked: t.filter((x) => x.w > 0).slice(0, 5).map((x) => x.tag),
-      disliked: t.filter((x) => x.w < 0).sort((a, b) => a.w - b.w).slice(0, 3).map((x) => x.tag),
+      liked: t.filter((x) => x.w > 0).slice(0, 5),
+      disliked: t.filter((x) => x.w < 0).sort((a, b) => a.w - b.w).slice(0, 3),
       signals,
       unlockAt: UGC_UNLOCK_SIGNALS,
       ugcMatches: matchedOpps.length,

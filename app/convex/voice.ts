@@ -167,6 +167,7 @@ export const transcribe = internalAction({
 });
 
 const quoteValidator = v.object({
+  reactionId: v.id("reactions"),
   name: v.string(),
   color: v.string(),
   laughed: v.boolean(),
@@ -186,6 +187,7 @@ export const forGig = query({
       if (!r.valid || !r.whyQuote) continue;
       const u = await ctx.db.get(r.reactorId);
       out.push({
+        reactionId: r._id,
         name: u?.name ?? "?",
         color: u?.color ?? "#888",
         laughed: r.laughed,

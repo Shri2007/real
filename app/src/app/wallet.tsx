@@ -1,10 +1,10 @@
 import { useAction, useQuery } from 'convex/react';
 import { useState } from 'react';
-import { Alert, ScrollView } from 'react-native';
+import { Alert, ScrollView, View } from 'react-native';
 
 import { api } from '../../convex/_generated/api';
 import { useSession } from '@/lib/session';
-import { Badge, Body, Button, Card, EmptyState, Money, Muted, Screen, Stat, Title, VerifiedStudentBadge } from '@/ui';
+import { Badge, Body, Button, Card, EmptyState, Money, Muted, Screen, Stat, Title, VerifiedStudentBadge, tokens } from '@/ui';
 
 const DAY = 24 * 60 * 60 * 1000;
 const dayKey = (ms: number) => {
@@ -33,12 +33,26 @@ function ago(ms: number) {
   return `${Math.round(s / 86400)}d ago`;
 }
 
+function tasteSummary(liked: { tag: string; w: number }[], disliked: { tag: string; w: number }[], signals: number) {
+  if (!liked.length && !disliked.length) {
+    return signals === 0
+      ? 'Swipe and react — your taste builds as you go.'
+      : 'Still calibrating. Keep swiping right on what fits.';
+  }
+  const into = liked.slice(0, 3).map((t) => t.tag).join(', ');
+  const skip = disliked.slice(0, 2).map((t) => t.tag).join(', ');
+  if (into && skip) return `Into ${into}; less so ${skip}.`;
+  if (into) return `Into ${into}.`;
+  return `You've been skipping ${skip}.`;
+}
+
 // Cash out via Whop once Lane D ships api.payments.cashout. Compiles either way.
 const cashoutRef = (api as any).payments?.cashout;
 
 export default function WalletScreen() {
   const { userId } = useSession();
   const wallet = useQuery(api.users.wallet, userId ? { userId } : 'skip');
+  const taste = useQuery(api.prefs.taste, userId ? { userId } : 'skip');
   const cashout = cashoutRef ? useAction(cashoutRef) : null; // stable per build, so hook order never changes
   const [busy, setBusy] = useState(false);
 
@@ -59,6 +73,36 @@ export default function WalletScreen() {
       <ScrollView contentContainerStyle={{ gap: 14, paddingBottom: 120 }}>
         <Title>Wallet</Title>
         {wallet.verifiedStudent ? <VerifiedStudentBadge school={wallet.school} /> : null}
+
+        {taste ? (
+          <Card style={{ gap: tokens.space.sm }}>
+            <Body>Your taste</Body>
+            <Muted>{tasteSummary(taste.liked, taste.disliked, taste.signals)}</Muted>
+            {taste.liked.length > 0 ? (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space.xs }}>
+                {taste.liked.map((t) => (
+                  <Badge key={t.tag} tone="good">
+                    {t.tag} · {t.w}
+                  </Badge>
+                ))}
+              </View>
+            ) : null}
+            {taste.disliked.length > 0 ? (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space.xs }}>
+                {taste.disliked.map((t) => (
+                  <Badge key={t.tag} tone="bad">
+                    not {t.tag} · {t.w}
+                  </Badge>
+                ))}
+              </View>
+            ) : null}
+            {!taste.liked.length && !taste.disliked.length ? (
+              <Muted>{taste.signals}/{taste.unlockAt} signals toward UGC unlock</Muted>
+            ) : (
+              <Muted>{taste.signals} swipes & reactions shaping this</Muted>
+            )}
+          </Card>
+        ) : null}
 
         <Card style={{ gap: 10 }}>
           <Muted>Balance</Muted>

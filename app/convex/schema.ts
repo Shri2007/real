@@ -101,6 +101,7 @@ export default defineSchema({
     userId: v.id("users"),
     status: v.union(v.literal("claimed"), v.literal("submitted"), v.literal("approved"), v.literal("rejected")),
     videoStorageId: v.optional(v.id("_storage")),
+    approvedAt: v.optional(v.number()), // set when a brand approves a submission
   })
     .index("by_oppId", ["oppId"])
     .index("by_userId", ["userId"])

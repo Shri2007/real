@@ -112,7 +112,7 @@ export function Stage({ gigId, onClose }: { gigId: Id<'gigs'>; onClose: () => vo
                 <Card style={mediaLayout.stack}>
                   <Title>The humans behind the curve</Title>
                   {!results.count && <Muted>Waiting for real humans. New reactions appear live.</Muted>}
-                  {results.reactors.map((reactor, index) => <Reactor key={`${index}-${reactor.name}-${reactor.color}`} name={reactor.name} color={reactor.color} laughed={reactor.laughed} verifiedStudent={reactor.verifiedStudent} school={reactor.school} />)}
+                  {results.reactors.map((reactor) => <Reactor key={reactor.reactionId} name={reactor.name} color={reactor.color} laughed={reactor.laughed} verifiedStudent={reactor.verifiedStudent} school={reactor.school} />)}
                 </Card>
               </View>
             </View>
