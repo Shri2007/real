@@ -100,7 +100,7 @@ export const review = mutation({
     const opp = claim && (await ctx.db.get(claim.oppId));
     if (!claim || !opp || opp.brandId !== brandId) throw new Error("Not your opportunity");
     if (claim.status !== "submitted") throw new Error("Nothing to review yet");
-    await ctx.db.patch(claimId, { status: approve ? "approved" : "rejected" });
+    await ctx.db.patch(claimId, { status: approve ? "approved" : "rejected", ...(approve ? { approvedAt: Date.now() } : {}) });
     if (approve) {
       const student = await ctx.db.get(claim.userId);
       if (student) await ctx.db.patch(student._id, { balanceCents: student.balanceCents + opp.payoutCents });

@@ -51,7 +51,7 @@ export default function WalletScreen() {
     );
   }
 
-  const valid = wallet.items.filter((i) => i.valid);
+  const valid = wallet.items.filter((i) => i.valid && i.kind === 'reaction');
   const { streak, reactedToday } = computeStreak(valid.map((i) => i.at));
 
   return (
@@ -98,9 +98,11 @@ export default function WalletScreen() {
           <EmptyState title="No reactions yet" body="No earnings yet: watch a clip on React. You get paid for attention, laugh or not." />
         ) : (
           wallet.items.map((i) => (
-            <Card key={i.reactionId} style={{ gap: 4 }}>
+            <Card key={i.id} style={{ gap: 4 }}>
               <Body>{i.gigTitle}</Body>
-              {i.valid ? (
+              {i.kind === 'ugc' ? (
+                <Badge tone="live">{`+$${(i.earnedCents / 100).toFixed(2)} · UGC approved`}</Badge>
+              ) : i.valid ? (
                 <Badge tone="good">+${(i.earnedCents / 100).toFixed(2)}</Badge>
               ) : (
                 <Badge tone="bad">Not paid: face out of frame</Badge>
