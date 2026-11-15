@@ -8,6 +8,9 @@ declare const process: { env: Record<string, string | undefined> };
 // The preference engine: every swipe, laugh and spoken "why" nudges per-tag weights on the student;
 // the For you feed ranks clips and UGC opportunities by those weights, with some exploration mixed in.
 
+// Shared tag vocabulary: onboarding interest tiles, seed content and the AI tagger all use it, so they line up.
+export const INTERESTS = ["gym", "skincare", "food", "energy drinks", "comedy", "tech", "fashion", "music", "study", "gaming", "travel", "pets"];
+
 const STOP = new Set(["the", "and", "for", "with", "this", "that", "your", "you", "our", "test", "clip", "video", "funny", "ending", "what", "does", "is", "it", "a", "an", "of", "to", "in", "on", "would", "could", "should", "will", "buy", "joke", "land", "make", "about", "from", "they", "have", "like"]);
 
 function fallbackTags(text: string) {
@@ -28,7 +31,7 @@ async function aiTags(text: string): Promise<string[]> {
           {
             role: "system",
             content:
-              "Tag a short video or brand content brief for a Gen Z discovery feed. Return 2-4 lowercase tags, 1-2 words each, mixing format and topic (e.g. \"skit\", \"dry humor\", \"gym\", \"skincare\", \"product demo\", \"energy drink\"). Prefer common, reusable tags.",
+              "Tag a short video or brand content brief for a Gen Z discovery feed. Return 2-4 lowercase tags, 1-2 words each, mixing format and topic (e.g. \"skit\", \"dry humor\", \"gym\", \"skincare\", \"product demo\", \"energy drink\"). Prefer common, reusable tags, and use these exact tags whenever they fit: " + INTERESTS.join(", ") + ".",
           },
           { role: "user", content: text },
         ],
@@ -91,6 +94,22 @@ export async function bumpTaste(ctx: MutationCtx, userId: Id<"users">, tags: str
   const taste = [...weights.entries()].map(([tag, w]) => ({ tag, w })).sort((a, b) => b.w - a.w).slice(0, 40);
   await ctx.db.patch(userId, { taste });
 }
+
+export const interests = query({
+  args: {},
+  returns: v.array(v.string()),
+  handler: async () => INTERESTS,
+});
+
+// Cold start: the interest tiles a student picks at onboarding seed their taste so the first cards already fit.
+export const setInterests = mutation({
+  args: { userId: v.id("users"), tags: v.array(v.string()) },
+  returns: v.null(),
+  handler: async (ctx, { userId, tags }) => {
+    await bumpTaste(ctx, userId, tags.filter((t) => INTERESTS.includes(t)).slice(0, 8), 2);
+    return null;
+  },
+});
 
 export const swipe = mutation({
   args: {
