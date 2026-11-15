@@ -1,8 +1,8 @@
-# REAL: know what lands before you post
+# REAL: verified Gen Z reactions + the why, before you post or launch
 
 YC Consumer Mobile Hackathon, Nov 15, 2026. Team: Shri + Vishnu. (Pivoted at 10:45 from OPEN MIC after judge feedback: "zero impact"; the judges suggested a niche UGC marketplace.)
 
-> **Bots inflate every metric, and AI fakes every testimonial.** REAL is a marketplace for **verified human reactions**: creators post a clip and pay per reaction; real people watch it with their camera on and get paid; on-device face detection proves a real human watched. Creators get a **live reaction curve** ("2 of 3 laughed at 0:04, attention dropped at 0:09") and an AI report. **We pay for attention, not applause**, so nobody has a reason to fake it.
+> **Brands and creators are flying blind on Gen Z: bots inflate every metric, and AI fakes every testimonial.** Test your ad, product video or post on **verified students** first: their faces prove they watched, their voices say why. REAL is a marketplace for **verified human reactions**: creators post a clip and pay per reaction; real people watch it with their camera on and get paid; on-device face detection proves a real human watched. Creators get a **live reaction curve** ("2 of 3 laughed at 0:04, attention dropped at 0:09") and an AI report. **We pay for attention, not applause**, so nobody has a reason to fake it.
 
 - **Build plan, lanes, API contract:** [`docs/TASKS.md`](docs/TASKS.md)
 - **Agent rules:** [`AGENTS.md`](AGENTS.md)

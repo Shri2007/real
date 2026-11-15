@@ -1,5 +1,7 @@
 # TASKS: REAL (pivoted at 10:45 from OPEN MIC)
 
+> **12:20 FOLD-IN (from Vishnu's spec):** REAL now sells **verified Gen Z reactions + the WHY** to **creators AND brands** ("test your ad or product video on verified Gen Z before you spend on it"). Three additions: **verified .edu badge** (Lane E), **hold-to-talk "why" after each reaction → quotes in results** (Lane V), and brand framing in the pitch/copy.
+
 > **11:35 TRACK PIVOT (small):** the only themed prizes are **Best use of Whop** and **Best use of Keiki**. So: **creators text their clip to the REAL iMessage agent (Keiki)**, pay through a **Whop** link, and get results texted back. **Reactors** use the app daily. Supermemory has no prize, so it's optional now.
 
 
@@ -77,6 +79,27 @@ GOAL: creators text a clip to the REAL agent on iMessage and get verified human 
 4. Channel: call list_channel_types. Use the FREE shared iMessage number or Telegram for the demo. DO NOT buy a dedicated line or anything paid; stop and tell Shri if it needs payment.
 5. Proactive text-back (stretch): when a gig reaches all its slots, schedule an action that messages the creator through Keiki's agent API (x-conversation-id = handle), if the free plan allows it.
 Run `cd app && npx convex dev --once` (deploys must succeed) and `npx tsc --noEmit`. Commit, push, open a PR. In the PR description, include the agent's name and how to text it.
+```
+
+## Lane V: Hold-to-talk "why" (**Vishnu, right after Whop's createCheckout ships**), files: `app/convex/voice.ts`, optional fields in `schema.ts`, `app/src/components/react/WhyRecorder.tsx`, a small hook-up in `app/src/components/react/Watch.tsx` (result view only), a "Quotes" card in `app/src/components/create/Results.tsx`
+```
+git checkout main && git pull && git checkout -b lane-v/voice-why
+Read AGENTS.md, docs/TASKS.md, app/convex/_generated/ai/guidelines.md. OPENAI_API_KEY is already in Convex env.
+
+GOAL: after a reactor finishes a clip, they HOLD a mic button and say WHY in 3–15 seconds ("lost me at the intro, too slow", "the ending got me"). Creators and brands see real quotes next to the curve.
+1. Recording (app): app/src/components/react/WhyRecorder.tsx, using expo-audio (npx expo install expo-audio; it's in Expo Go) with useAudioRecorder and RecordingPresets.HIGH_QUALITY. Ask mic permission on the first press. Hold to record, release to stop, max 15s. Upload the file via api.voice.generateUploadUrl → POST → storageId → api.voice.submitWhy({reactionId? or gigId+reactorId, audioStorageId}). Show it in Watch.tsx's RESULT view only (after "Paid $X"), with a "Skip" option. Use @/ui primitives only.
+2. Backend (app/convex/voice.ts): mutation generateUploadUrl; mutation submitWhy stores audioStorageId on the reaction (ADD optional fields to reactions: whyAudioStorageId, whyText, whyTags, whyQuote) and schedules action internal.voice.transcribe.
+   transcribe: fetch the audio from storage → OpenAI transcription (model gpt-4o-mini-transcribe or the current cheapest transcribe model) → a Responses call (gpt-6-luna) that extracts {quote (≤12 words, verbatim), sentiment: "pos"|"neg"|"mixed", tags: string[] (e.g. "slow intro", "great ending", "relatable")} → patch the reaction. Never invent text: if the transcript is empty, leave fields unset.
+   query api.voice.forGig({gigId}) → [{name, color, laughed, whyQuote, sentiment, tags}] for valid reactions with a quote.
+3. Results (Capy's app/src/components/create/Results.tsx): add a "What people said" Card listing the quotes (avatar + quote + sentiment badge) under the curve, plus the top 3 tags with counts ("slow intro ×3"). Keep the existing code intact; additive only.
+4. Keiki: extend GET /keiki/results to include up to 3 quotes in its JSON (edit app/convex/keiki.ts minimally: add a `quotes` field from api.voice.forGig).
+`cd app && npx convex dev --once` + `npx tsc --noEmit` must pass. Open a PR.
+```
+
+## Lane E: Verified .edu badge (**Cursor**, owns onboarding), files: `app/src/components/onboarding.tsx`, optional fields via a tiny `app/convex/users.ts` change, `app/src/ui/*` badge
+```
+git checkout main && git pull && git checkout -b lane-e/edu-badge
+Read AGENTS.md and docs/TASKS.md. Add an OPTIONAL "School email" field to onboarding. If it ends in ".edu", mark the user verified. Backend: add optional fields `email`, `school` (derived from the domain, e.g. "berkeley.edu" → "Berkeley"), `verifiedStudent: boolean` to users in app/convex/schema.ts, and an optional `email` arg to api.users.create that sets them (domain check only, no email code today). Show a "✓ Verified student · Berkeley" Badge on the Wallet header and next to reactor avatars in Results/Stage (results.reactors: add `verifiedStudent` and `school` to each item in app/convex/reactions.ts results; additive only). Results header: "N verified students reacted". Keep everything optional so existing users still work. `cd app && npx convex dev --once` + `npx tsc --noEmit` pass. Open a PR.
 ```
 
 ## Lane T: Taste Profile + audience targeting (**Vishnu**, after Whop), files: `app/convex/taste.ts`, optional fields in `schema.ts`, `app/src/components/taste/**`, a "Taste DNA" card on `app/src/app/wallet.tsx` (coordinate with the CAPY-3 wallet PR)
