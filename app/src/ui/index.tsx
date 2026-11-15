@@ -5,27 +5,28 @@ import { Keyboard, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export const tokens = {
-  bg: '#0B0D12',
-  card: '#151922',
-  cardBorder: '#232A36',
-  text: '#F2F4F7',
-  muted: '#8A93A3',
-  accent: '#2EE59A',
-  accentDim: 'rgba(46, 229, 154, 0.14)',
-  live: '#5B8CFF',
-  good: '#2EE59A',
-  bad: '#FF6B7A',
-  radius: 16,
-  radiusSm: 10,
-  pad: 16,
-  padLg: 24,
-  space: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 },
+  bg: '#090B0A',
+  card: '#121613',
+  cardRaised: '#191E1A',
+  cardBorder: '#29312B',
+  text: '#F3F4EF',
+  muted: '#9AA39B',
+  accent: '#B4F34A',
+  accentDim: 'rgba(180, 243, 74, 0.12)',
+  live: '#B4F34A',
+  good: '#B4F34A',
+  bad: '#D89283',
+  radius: 20,
+  radiusSm: 13,
+  pad: 18,
+  padLg: 26,
+  space: { xs: 5, sm: 9, md: 13, lg: 18, xl: 26, xxl: 36 },
   type: {
-    title: 28,
-    subtitle: 18,
+    title: 30,
+    subtitle: 19,
     body: 16,
     muted: 13,
-    stat: 36,
+    stat: 40,
     badge: 12,
   },
 };
@@ -225,22 +226,55 @@ export function EmptyState({
   );
 }
 
+/** Editorial section heading with an optional quiet trailing label. */
+export function SectionHeader({ title, detail, style }: { title: string; detail?: string; style?: ViewStyle }) {
+  return (
+    <View style={[styles.sectionHeader, style]}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {detail ? <Text style={styles.sectionDetail}>{detail}</Text> : null}
+    </View>
+  );
+}
+
+/** Compact metadata/payout chip that follows the app's restrained surface palette. */
+export function Chip({ children, tone = 'muted', style }: { children: ReactNode; tone?: 'good' | 'live' | 'muted' | 'bad'; style?: ViewStyle }) {
+  const toneStyle = tone === 'good' ? styles.chipGood : tone === 'bad' ? styles.chipBad : tone === 'live' ? styles.chipLive : styles.chipMuted;
+  const textStyle = tone === 'good' ? styles.chipTextGood : tone === 'bad' ? styles.chipTextBad : tone === 'live' ? styles.chipTextLive : styles.chipTextMuted;
+  return <View style={[styles.chip, toneStyle, style]}><Text style={[styles.chipText, textStyle]}>{children}</Text></View>;
+}
+
+/** Keeps video and other edge-to-edge media aligned to the shared frame treatment. */
+export function VideoFrame({ children, style }: { children: ReactNode; style?: ViewStyle }) {
+  return <View style={[styles.videoFrame, style]}>{children}</View>;
+}
+
+export function ProgressBar({ value, style }: { value: number; style?: ViewStyle }) {
+  const progress = Math.max(0, Math.min(1, value));
+  return <View style={[styles.progressTrack, style]}><View style={[styles.progressFill, { width: `${progress * 100}%` }]} /></View>;
+}
+
+/** Primary action alias for screens where the main action needs explicit hierarchy. */
+export function PrimaryCTA(props: Omit<Parameters<typeof Button>[0], 'variant'>) {
+  return <Button {...props} variant="primary" />;
+}
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: tokens.bg,
-    padding: tokens.pad,
+    paddingHorizontal: tokens.pad,
+    paddingTop: tokens.pad,
   },
   card: {
     backgroundColor: tokens.card,
     borderRadius: tokens.radius,
     padding: tokens.pad,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
     borderColor: tokens.cardBorder,
   },
   button: {
     borderRadius: tokens.radius,
-    paddingVertical: 14,
+    paddingVertical: 15,
     paddingHorizontal: tokens.pad,
     alignItems: 'center',
     justifyContent: 'center',
@@ -264,7 +298,7 @@ const styles = StyleSheet.create({
     color: tokens.bg,
     fontWeight: '700',
     fontSize: tokens.type.body,
-    letterSpacing: 0.2,
+    letterSpacing: -0.15,
   },
   buttonLabelSecondary: {
     color: tokens.text,
@@ -273,7 +307,7 @@ const styles = StyleSheet.create({
     color: tokens.text,
     fontSize: tokens.type.title,
     fontWeight: '800',
-    letterSpacing: -0.6,
+    letterSpacing: -0.8,
   },
   body: {
     color: tokens.text,
@@ -295,13 +329,13 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.accentDim,
   },
   badgeLive: {
-    backgroundColor: 'rgba(91, 140, 255, 0.16)',
+    backgroundColor: tokens.accentDim,
   },
   badgeMuted: {
-    backgroundColor: 'rgba(138, 147, 163, 0.16)',
+    backgroundColor: 'rgba(154, 163, 155, 0.12)',
   },
   badgeBad: {
-    backgroundColor: 'rgba(255, 107, 122, 0.16)',
+    backgroundColor: 'rgba(216, 146, 131, 0.12)',
   },
   badgeText: {
     fontSize: tokens.type.badge,
@@ -325,7 +359,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: {
-    color: '#0B0D12',
+    color: tokens.bg,
     fontWeight: '800',
   },
   money: {
@@ -372,4 +406,34 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlign: 'center',
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: tokens.space.md,
+  },
+  sectionTitle: {
+    color: tokens.text,
+    fontSize: tokens.type.subtitle,
+    fontWeight: '700',
+    letterSpacing: -0.35,
+  },
+  sectionDetail: {
+    color: tokens.muted,
+    fontSize: tokens.type.muted,
+    fontVariant: ['tabular-nums'],
+  },
+  chip: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 11, paddingVertical: 7 },
+  chipGood: { backgroundColor: tokens.accentDim },
+  chipLive: { backgroundColor: tokens.accentDim },
+  chipMuted: { backgroundColor: tokens.cardRaised },
+  chipBad: { backgroundColor: 'rgba(216, 146, 131, 0.12)' },
+  chipText: { fontSize: tokens.type.badge, fontWeight: '700', letterSpacing: 0.1 },
+  chipTextGood: { color: tokens.good },
+  chipTextLive: { color: tokens.live },
+  chipTextMuted: { color: tokens.muted },
+  chipTextBad: { color: tokens.bad },
+  videoFrame: { overflow: 'hidden', borderRadius: tokens.radius, backgroundColor: '#050605', borderWidth: 1, borderColor: tokens.cardBorder },
+  progressTrack: { height: 4, overflow: 'hidden', borderRadius: 999, backgroundColor: tokens.cardBorder },
+  progressFill: { height: '100%', borderRadius: 999, backgroundColor: tokens.accent },
 });
