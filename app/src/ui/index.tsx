@@ -1,7 +1,7 @@
 // Shared UI primitives. ALL screens use these — restyle here to restyle the app.
 // Design: REAL — trustworthy, human, playful. Dark mode. Money-green for earnings.
 import { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export const tokens = {
@@ -33,7 +33,12 @@ export const tokens = {
 export function Screen({ children, style }: { children: ReactNode; style?: ViewStyle }) {
   return (
     <SafeAreaView style={[styles.screen, style]} edges={['top', 'left', 'right']}>
-      {children}
+      {/* Tap anywhere outside a text field to close the keyboard (iOS number/text pads have no Done key). */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss} accessible={false}>
+          {children}
+        </Pressable>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
