@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 
 export const LAUGH_THRESHOLD = 0.45;
 const MIN_FACE_PCT = 70; // must be watching (face visible) at least 70% of the clip to be paid
@@ -44,6 +45,7 @@ export const submit = mutation({
     if (valid) {
       const filled = gig.filled + 1;
       await ctx.db.patch(gig._id, { filled, status: filled >= gig.slots ? "done" : gig.status });
+      if (filled >= gig.slots) await ctx.scheduler.runAfter(30000, internal.report.generateForGig, { gigId: gig._id });
       const reactor = await ctx.db.get(args.reactorId);
       if (reactor) await ctx.db.patch(reactor._id, { balanceCents: reactor.balanceCents + earnedCents });
     }
@@ -77,12 +79,21 @@ export const results = query({
     const reactors = await Promise.all(
       rs.map(async (r) => {
         const u = await ctx.db.get(r.reactorId);
-        return { name: u?.name ?? "?", color: u?.color ?? "#888", laughed: r.laughed, peak: r.peak };
+        return {
+          name: u?.name ?? "?",
+          color: u?.color ?? "#888",
+          laughed: r.laughed,
+          peak: r.peak,
+          verifiedStudent: u?.verifiedStudent ?? false,
+          school: u?.school,
+        };
       }),
     );
+    const verifiedStudentCount = reactors.filter((r) => r.verifiedStudent).length;
     return {
       count: rs.length,
       laughedCount: rs.filter((r) => r.laughed).length,
+      verifiedStudentCount,
       curve,
       peakSec: peakMoment?.sec ?? null,
       reactors,

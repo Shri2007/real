@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
 import { Platform, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { useMutation } from 'convex/react';
+import { useAction, useMutation } from 'convex/react';
+import { openBrowserAsync } from 'expo-web-browser';
 import { Body, Button, Card, Muted, tokens } from '@/ui';
 import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
@@ -12,6 +13,7 @@ export function NewTest({ userId, onDone, onCancel }: { userId: Id<'users'>; onD
   const uploadUrl = useMutation(api.gigs.generateUploadUrl);
   const create = useMutation(api.gigs.create);
   const publish = useMutation(api.gigs.publish);
+  const checkout = useAction(api.payments.checkout);
   const [asset, setAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [duration, setDuration] = useState(0);
   const [title, setTitle] = useState('');
@@ -43,7 +45,7 @@ export function NewTest({ userId, onDone, onCancel }: { userId: Id<'users'>; onD
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not choose a video. Try again.'); }
     finally { lock.current = false; setBusy(false); }
   };
-  const submit = async () => {
+  const submit = async (mode: 'pay' | 'free') => {
     if (lock.current) return;
     if (!draft && (!asset || !validDuration(duration) || !title.trim() || !positiveInteger(slots) || !positiveInteger(price))) {
       setError('Add a title, a verified video of 30 seconds or less, and positive whole numbers for slots and cents.');
@@ -67,15 +69,21 @@ export function NewTest({ userId, onDone, onCancel }: { userId: Id<'users'>; onD
         setDraft(gigId);
       }
       if (!gigId) throw new Error('No draft to publish.');
-      setStep('Publishing test…');
-      await publish({ gigId });
+      if (mode === 'pay') {
+        setStep('Opening Whop checkout…');
+        const { url } = await checkout({ gigId });
+        await openBrowserAsync(url);
+      } else {
+        setStep('Publishing test…');
+        await publish({ gigId });
+      }
       onDone(gigId);
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not publish. Please retry.'); }
     finally { lock.current = false; setBusy(false); setStep(''); }
   };
   return <Card style={{ gap: tokens.space.md }}>
     <Body>New test · one cut</Body>
-    <Muted>Create a second test for your other cut, then select A and B in My tests. Free hackathon publishing; no checkout is charged here.</Muted>
+    <Muted>Create a second test for your other cut, then select A and B in My tests. Pay with Whop to go live, or publish a free demo test.</Muted>
     <Button label={asset ? 'Choose another video' : 'Choose video (up to 30s)'} onPress={pick} disabled={busy || !!draft} />
     {asset && <>
       <ClipPlayer key={asset.uri} uri={asset.uri} onDuration={setDuration} />
@@ -89,7 +97,9 @@ export function NewTest({ userId, onDone, onCancel }: { userId: Id<'users'>; onD
     </View>)}
     {draft && <Muted>Draft saved. Retry publishes this same test without uploading or creating another. You can also return to My tests and open this draft.</Muted>}
     {!!error && <Body>{error}</Body>}
-    <Button label={busy ? step || 'Choosing video…' : draft ? 'Retry publishing saved draft' : 'Publish free test'} onPress={submit} disabled={busy || (!draft && (!validDuration(duration) || !title.trim() || !positiveInteger(slots) || !positiveInteger(price)))} />
+    <Button label={busy ? step || 'Choosing video…' : `Pay ${positiveInteger(slots) && positiveInteger(price) ? `$${(Number(slots) * Number(price) * 1.2 / 100).toFixed(2)} ` : ''}with Whop`} onPress={() => submit('pay')} disabled={busy || (!draft && (!validDuration(duration) || !title.trim() || !positiveInteger(slots) || !positiveInteger(price)))} />
+    {!busy && <Muted>Includes a 20% platform fee. The test goes live as soon as Whop confirms payment.</Muted>}
+    <Button label={draft ? 'Retry publishing saved draft (free demo)' : 'Publish free demo test'} variant="secondary" onPress={() => submit('free')} disabled={busy || (!draft && (!validDuration(duration) || !title.trim() || !positiveInteger(slots) || !positiveInteger(price)))} />
     <Button label="Back to My tests" variant="secondary" onPress={onCancel} disabled={busy} />
   </Card>;
 }

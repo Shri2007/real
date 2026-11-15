@@ -114,7 +114,8 @@ export const results = httpAction(async (ctx, req) => {
   const summary = data.count ? `${data.laughedCount} of ${data.count} actually laughed${peak}` : `No verified reactions yet · ${gig.filled} of ${gig.slots} spots filled`;
   // The current API has no time-based attention denominator: never invent a drop-off or edit recommendation.
   const report = 'report' in gig ? gig.report : null;
-  return json({ gigId, summary, filled: gig.filled, slots: gig.slots, status: gig.status, ...data, report });
+  const quotes = (await ctx.runQuery(api.voice.forGig, { gigId })).slice(0, 3).map(q => ({ name: q.name, quote: q.whyQuote, sentiment: q.sentiment ?? null }));
+  return json({ gigId, summary, filled: gig.filled, slots: gig.slots, status: gig.status, ...data, report, quotes });
 });
 export const status = httpAction(async (ctx, req) => {
   if (!authorized(req)) return json({ error: 'Unauthorized' }, 401);

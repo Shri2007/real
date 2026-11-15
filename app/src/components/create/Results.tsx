@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { View } from 'react-native';
-import { useMutation, useQuery } from 'convex/react';
-import { Avatar, Badge, Body, Button, Card, Muted, Title, tokens } from '@/ui';
+import { useAction, useMutation, useQuery } from 'convex/react';
+import { Avatar, Badge, Body, Button, Card, Muted, Title, VerifiedStudentBadge, tokens } from '@/ui';
 import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
 import { ClipPlayer } from './ClipPlayer';
@@ -39,6 +39,7 @@ function ResultsContent({ gigId, label }: { gigId: Id<'gigs'>; label?: string })
     <Badge tone={gig.status === 'live' ? 'live' : 'muted'}>{gig.status} · {gig.filled}/{gig.slots} filled</Badge>
     {!!gig.question && <Body>{gig.question}</Body>}
     <Body>{results.laughedCount} of {results.count} valid reactors actually laughed</Body>
+    <Body>{results.verifiedStudentCount} verified students reacted</Body>
     <Muted>Only valid completed reactions are included. This is not attention or retention data.</Muted>
     {!results.count && <Body>Waiting for reactions. No measured curve yet.</Body>}
     {gig.videoUrl ? <ClipPlayer key={gig.videoUrl} uri={gig.videoUrl} onDuration={setDuration} series={series} durationSec={(gig.durationMs ?? 0) / 1000} peakSec={results.peakSec} drops={drops} /> : <>
@@ -47,13 +48,52 @@ function ResultsContent({ gigId, label }: { gigId: Id<'gigs'>; label?: string })
     </>}
     <Muted>Red markers show laughter drops: the average falls by at least 0.15 after a second at or above 0.45. They do not show attention loss. Timing is whole-second; missing bins are not zero.</Muted>
     {results.reactors.map((reactor, i) => <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space.sm, flexWrap: 'wrap' }}>
-      <Avatar name={reactor.name} color={reactor.color} /><Body>{reactor.name}</Body><Badge tone={reactor.laughed ? 'good' : 'muted'}>{reactor.laughed ? 'Laughed' : 'Stayed deadpan'}</Badge>
+      <Avatar name={reactor.name} color={reactor.color} /><Body>{reactor.name}</Body>
+      {reactor.verifiedStudent ? <VerifiedStudentBadge school={reactor.school} /> : null}
+      <Badge tone={reactor.laughed ? 'good' : 'muted'}>{reactor.laughed ? 'Laughed' : 'Stayed deadpan'}</Badge>
     </View>)}
+    <WhatPeopleSaid gigId={gigId} />
+    {results.count > 0 && <AiReport gigId={gigId} report={gig.report} />}
     {gig.status === 'draft' && <>
       <Muted>Saved draft. Video duration must be verified at 30 seconds or less before publishing.</Muted>
       <Button label={busy ? 'Publishing…' : 'Publish saved draft (free test)'} disabled={busy || !validDuration(duration)} onPress={publishDraft} />
     </>}
     {!!error && <Body>{error}</Body>}
+  </Card>;
+}
+
+function AiReport({ gigId, report }: { gigId: Id<'gigs'>; report?: string[] }) {
+  const write = useAction(api.report.forGig);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  return <Card style={{ gap: tokens.space.sm }}>
+    <Body>What to fix</Body>
+    {report?.length ? report.map((b, i) => <Body key={i}>• {b}</Body>) : <Muted>No AI report yet. It's written automatically when every slot fills.</Muted>}
+    {!!error && <Body>{error}</Body>}
+    <Button label={busy ? 'Writing report…' : report?.length ? 'Rewrite AI report' : 'Write AI report now'} variant="secondary" disabled={busy} onPress={async () => {
+      setBusy(true);
+      setError('');
+      try { await write({ gigId }); } catch { setError('Could not write the report. Try again.'); } finally { setBusy(false); }
+    }} />
+  </Card>;
+}
+
+function WhatPeopleSaid({ gigId }: { gigId: Id<'gigs'> }) {
+  const quotes = useQuery(api.voice.forGig, { gigId });
+  if (!quotes?.length) return null;
+  const counts = new Map<string, number>();
+  for (const q of quotes) for (const t of q.tags) counts.set(t, (counts.get(t) ?? 0) + 1);
+  const topTags = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
+  return <Card style={{ gap: tokens.space.sm }}>
+    <Body>What people said</Body>
+    {topTags.length > 0 && <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space.xs }}>
+      {topTags.map(([tag, n]) => <Badge key={tag} tone="live">{tag} ×{n}</Badge>)}
+    </View>}
+    {quotes.map((q, i) => <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space.sm, flexWrap: 'wrap' }}>
+      <Avatar name={q.name} color={q.color} size={32} />
+      <Body style={{ flex: 1 }}>“{q.whyQuote}”</Body>
+      {q.sentiment && <Badge tone={q.sentiment === 'pos' ? 'good' : q.sentiment === 'neg' ? 'bad' : 'muted'}>{q.sentiment === 'pos' ? 'Liked it' : q.sentiment === 'neg' ? 'Not for them' : 'Mixed'}</Badge>}
+    </View>)}
   </Card>;
 }
 

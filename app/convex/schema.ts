@@ -11,6 +11,10 @@ export default defineSchema({
     color: v.string(),
     handle: v.optional(v.string()), // Keiki conversation/sender identity
     balanceCents: v.number(), // reactor earnings (demo wallet; Whop handles real payouts)
+    // Optional .edu verification (Lane E) — all additive / optional
+    email: v.optional(v.string()),
+    school: v.optional(v.string()), // derived from domain, e.g. berkeley.edu → Berkeley
+    verifiedStudent: v.optional(v.boolean()),
   }).index("by_handle", ["handle"]),
 
   gigs: defineTable({
@@ -25,6 +29,8 @@ export default defineSchema({
     status: v.union(v.literal("draft"), v.literal("live"), v.literal("done")),
     paid: v.boolean(), // Whop checkout completed
     whopCheckoutId: v.optional(v.string()),
+    whopPaymentId: v.optional(v.string()),
+    report: v.optional(v.array(v.string())), // AI "what to fix" bullets
   })
     .index("by_status", ["status"])
     .index("by_creatorId", ["creatorId"]),
@@ -40,8 +46,21 @@ export default defineSchema({
     watchedToEnd: v.boolean(),
     valid: v.boolean(), // face present enough + watched to end → paid
     earnedCents: v.number(),
+    // Hold-to-talk "why" after the clip (Lane V): audio → transcript → verbatim quote + reason tags.
+    whyAudioStorageId: v.optional(v.id("_storage")),
+    whyText: v.optional(v.string()),
+    whyQuote: v.optional(v.string()),
+    whyTags: v.optional(v.array(v.string())),
+    whySentiment: v.optional(v.union(v.literal("pos"), v.literal("neg"), v.literal("mixed"))),
   })
     .index("by_gigId", ["gigId"])
     .index("by_reactorId", ["reactorId"])
     .index("by_gigId_and_reactorId", ["gigId", "reactorId"]),
+
+  // Reactor cash-out requests (paid out via Whop).
+  payouts: defineTable({
+    userId: v.id("users"),
+    amountCents: v.number(),
+    status: v.union(v.literal("pending"), v.literal("paid")),
+  }).index("by_userId", ["userId"]),
 });
