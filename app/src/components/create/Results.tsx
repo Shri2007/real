@@ -9,6 +9,7 @@ import { ReactionCurve } from './ReactionCurve';
 import { abVerdict, dropOffs, laughOnset, validDuration } from './curve';
 import { PresentButton } from '../stage';
 import { UgcPanel } from './UgcPanel';
+import { Segments } from './Segments';
 
 export function Results({ gigId, label }: { gigId: Id<'gigs'>; label?: string }) {
   return <PresentButton gigId={gigId}><ResultsContent gigId={gigId} label={label} /></PresentButton>;
@@ -54,6 +55,7 @@ function ResultsContent({ gigId, label }: { gigId: Id<'gigs'>; label?: string })
       <Badge tone={reactor.laughed ? 'good' : 'muted'}>{reactor.laughed ? 'Laughed' : 'Stayed deadpan'}</Badge>
     </View>)}
     <WhatPeopleSaid gigId={gigId} />
+    <Segments gigId={gigId} />
     {results.count > 0 && <AiReport gigId={gigId} report={gig.report} />}
     <UgcPanel gigId={gigId} brandId={gig.creatorId} gigTitle={gig.title} />
     {gig.status === 'draft' && <>
