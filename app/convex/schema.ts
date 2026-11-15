@@ -18,6 +18,8 @@ export default defineSchema({
     verifiedStudent: v.optional(v.boolean()), // set only after the emailed code is confirmed (verify.ts)
     whopUserId: v.optional(v.string()), // linked Whop account for cash-outs (payments.linkWhop)
     whopUsername: v.optional(v.string()),
+    demoPass: v.optional(v.boolean()), // verified via the judges' demo pass instead of a .edu (verify.demoPass)
+    role: v.optional(v.union(v.literal("student"), v.literal("brand"))), // picked at onboarding
   })
     .index("by_handle", ["handle"])
     .index("by_email", ["email"]),

@@ -1,4 +1,4 @@
-import { useAction } from 'convex/react';
+import { useAction, useMutation } from 'convex/react';
 import { ConvexError } from 'convex/values';
 import { useState } from 'react';
 import { TextInput, View } from 'react-native';
@@ -12,6 +12,9 @@ const input = { color: tokens.text, backgroundColor: tokens.bg, borderColor: tok
 export function EduVerify({ userId, initialEmail = '', onVerified }: { userId: Id<'users'>; initialEmail?: string; onVerified: (school: string | null) => void }) {
   const start = useAction(api.verify.start);
   const confirm = useAction(api.verify.confirm);
+  const demoPass = useMutation(api.verify.demoPass);
+  const [judge, setJudge] = useState(false);
+  const [pass, setPass] = useState('');
   const [email, setEmail] = useState(initialEmail);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [code, setCode] = useState('');
@@ -47,5 +50,11 @@ export function EduVerify({ userId, initialEmail = '', onVerified }: { userId: I
       <Button label="Use a different email" variant="secondary" disabled={busy} onPress={() => { setSentTo(null); setError(''); }} />
     </>}
     {!!error && <Body>{error}</Body>}
+    {!judge ? <Button label="Judging the demo? No .edu needed" variant="secondary" disabled={busy} onPress={() => { setJudge(true); setError(''); }} /> : <>
+      <Muted>Enter the demo pass to unlock everything a verified student sees.</Muted>
+      <TextInput accessibilityLabel="Demo pass" placeholder="Demo pass" placeholderTextColor={tokens.muted} value={pass} onChangeText={setPass}
+        autoCapitalize="none" autoCorrect={false} style={input} />
+      <Button label={busy ? 'Checking…' : 'Unlock with demo pass'} disabled={busy || !pass.trim()} onPress={() => run(async () => setSchool((await demoPass({ userId, pass })).school))} />
+    </>}
   </View>;
 }

@@ -1,12 +1,12 @@
 import { ConvexError, v } from "convex/values";
-import { action, internalAction, internalMutation } from "./_generated/server";
+import { action, internalMutation, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import { parseEduEmail } from "./users";
 
 declare const process: { env: Record<string, string | undefined> };
 
-// Student verification: we email a 6-digit code to the .edu address (Resend), and only a correct code
+// Student verification: we email a 6-digit code to the .edu address (email.ts), and only a correct code
 // marks the account verified. One verified account per school email.
 const CODE_TTL_MS = 10 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 30 * 1000;
@@ -43,27 +43,6 @@ export const dropCode = internalMutation({
   },
 });
 
-export const sendEmail = internalAction({
-  args: { to: v.string(), code: v.string() },
-  returns: v.null(),
-  handler: async (_ctx, { to, code }) => {
-    const key = process.env.RESEND_API_KEY;
-    if (!key) throw new Error("RESEND_API_KEY is not set in Convex env");
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: process.env.RESEND_FROM ?? "REAL <onboarding@resend.dev>",
-        to: [to],
-        subject: `Your REAL student code: ${code}`,
-        text: `Your REAL verification code is ${code}. It expires in 10 minutes. If you didn't ask for it, ignore this email.`,
-      }),
-    });
-    if (!res.ok) throw new Error(`Resend failed: ${res.status} ${await res.text()}`);
-    return null;
-  },
-});
-
 // Step 1: email a code to the student's .edu address.
 export const start = action({
   args: { userId: v.id("users"), email: v.string() },
@@ -76,7 +55,7 @@ export const start = action({
     const code = String(digits[0] % 1_000_000).padStart(6, "0");
     await ctx.runMutation(internal.verify.saveCode, { userId, email: edu.email, codeHash: await sha256(`${userId}:${code}`) });
     try {
-      await ctx.runAction(internal.verify.sendEmail, { to: edu.email, code });
+      await ctx.runAction(internal.email.sendCode, { to: edu.email, code });
     } catch (e) {
       await ctx.runMutation(internal.verify.dropCode, { userId });
       console.error(e);
@@ -129,5 +108,19 @@ export const confirm = action({
     });
     if (!result.ok) throw new ConvexError(result.error);
     return { school: result.school };
+  },
+});
+
+// Demo pass for judges without a .edu: the right pass (DEMO_PASS, default "yc2026") marks the account verified.
+export const demoPass = mutation({
+  args: { userId: v.id("users"), pass: v.string() },
+  returns: v.object({ school: v.string() }),
+  handler: async (ctx, { userId, pass }) => {
+    const user = await ctx.db.get(userId);
+    if (!user) throw new ConvexError("Account not found");
+    const expected = (process.env.DEMO_PASS ?? "yc2026").trim().toLowerCase();
+    if (pass.trim().toLowerCase() !== expected) throw new ConvexError("That demo pass isn't right");
+    await ctx.db.patch(userId, { verifiedStudent: true, school: "Demo pass", demoPass: true });
+    return { school: "Demo pass" };
   },
 });
