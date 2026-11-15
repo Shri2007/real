@@ -46,8 +46,8 @@ export default function ForYouScreen() {
       {taste && (taste.liked.length > 0 || taste.disliked.length > 0) ? <View style={{ gap: tokens.space.xs }}>
         <Muted>Your taste so far · {taste.signals} swipes & reactions</Muted>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space.xs }}>
-          {taste.liked.map((t) => <Badge key={t} tone="good">{t}</Badge>)}
-          {taste.disliked.map((t) => <Badge key={t} tone="bad">not {t}</Badge>)}
+          {taste.liked.map((t) => <Badge key={t.tag} tone="good">{t.tag}</Badge>)}
+          {taste.disliked.map((t) => <Badge key={t.tag} tone="bad">not {t.tag}</Badge>)}
         </View>
       </View> : <Body>Swipe right on what you'd watch or make, left on what you wouldn't. The feed learns as you go.</Body>}
       {taste && (taste.signals < taste.unlockAt

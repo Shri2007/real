@@ -86,6 +86,7 @@ export const results = query({
       rs.map(async (r) => {
         const u = await ctx.db.get(r.reactorId);
         return {
+          reactionId: r._id,
           name: u?.name ?? "?",
           color: u?.color ?? "#888",
           laughed: r.laughed,
