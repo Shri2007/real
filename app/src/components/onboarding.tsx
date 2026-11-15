@@ -5,6 +5,7 @@ import { Pressable, TextInput, View } from 'react-native';
 import { api } from '../../convex/_generated/api';
 import { useSession } from '@/lib/session';
 import { InterestPicker } from '@/components/InterestPicker';
+import { EduVerify } from '@/components/EduVerify';
 import { Id } from '../../convex/_generated/dataModel';
 import {
   Avatar,
@@ -15,7 +16,6 @@ import {
   Muted,
   Screen,
   Title,
-  VerifiedStudentBadge,
   tokens,
 } from '@/ui';
 
@@ -43,10 +43,21 @@ export function Onboarding() {
   const [color, setColor] = useState(COLORS[0]);
   const [busy, setBusy] = useState(false);
   const [created, setCreated] = useState<Id<'users'> | null>(null);
+  const [step, setStep] = useState<'verify' | 'interests'>('interests');
 
   const schoolPreview = useMemo(() => previewEdu(email), [email]);
   const canContinue = name.trim().length > 0 && !busy;
 
+  if (created && step === 'verify') return <Screen style={{ justifyContent: 'center', gap: tokens.space.lg }}>
+    <View style={{ gap: tokens.space.sm }}>
+      <Title>Verify you're a student</Title>
+      <Body>Brands pay for verified Gen Z. Confirm your school email to unlock paid UGC jobs.</Body>
+    </View>
+    <Card style={{ gap: tokens.space.md }}>
+      <EduVerify userId={created} initialEmail={email.trim()} onVerified={() => setStep('interests')} />
+      <Button label="Skip for now" variant="secondary" onPress={() => setStep('interests')} />
+    </Card>
+  </Screen>;
   if (created) return <InterestPicker userId={created} onDone={() => setUserId(created)} />;
 
   return (
@@ -105,7 +116,7 @@ export function Onboarding() {
             }}
           />
           {schoolPreview ? (
-            <VerifiedStudentBadge school={schoolPreview} />
+            <Muted>Next, we'll email a code to verify you're a student at {schoolPreview}.</Muted>
           ) : email.trim() ? (
             <Muted>Use a .edu address to get a verified student badge.</Muted>
           ) : (
@@ -141,12 +152,8 @@ export function Onboarding() {
           onPress={async () => {
             setBusy(true);
             try {
-              const trimmedEmail = email.trim();
-              const userId = await createUser({
-                name: name.trim(),
-                color,
-                ...(trimmedEmail ? { email: trimmedEmail } : {}),
-              });
+              const userId = await createUser({ name: name.trim(), color });
+              setStep(schoolPreview ? 'verify' : 'interests');
               setCreated(userId);
             } finally {
               setBusy(false);

@@ -27,26 +27,9 @@ export const create = mutation({
     color: v.string(),
     email: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
-    const edu = parseEduEmail(args.email);
-    return ctx.db.insert("users", {
-      name: args.name.trim(),
-      color: args.color,
-      balanceCents: 0,
-      ...edu,
-    });
-  },
-});
-
-// Add or change a school email later (e.g. to unlock UGC jobs). Domain check only, same as onboarding.
-export const verify = mutation({
-  args: { userId: v.id("users"), email: v.string() },
-  handler: async (ctx, { userId, email }) => {
-    const edu = parseEduEmail(email);
-    if (!edu.verifiedStudent) throw new Error("Use your school email ending in .edu");
-    await ctx.db.patch(userId, edu);
-    return edu.school ?? null;
-  },
+  // email is accepted for compatibility but no longer verifies anything: the app runs verify.start/confirm (emailed code).
+  handler: async (ctx, args) =>
+    ctx.db.insert("users", { name: args.name.trim(), color: args.color, balanceCents: 0 }),
 });
 
 export const get = query({
