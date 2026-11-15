@@ -62,6 +62,7 @@ One account per verified email and device. The verified badge is the product: br
   - transcribes it and pulls out **sentiment, reasons** (price, taste, look, trust, "my roommate has it"), **purchase intent**, and **one quotable line**;
   - sometimes asks **one** short follow-up out loud or on screen ("Would you pay $4 for it?" / "What would make you switch from Celsius?"), and only when the take was vague or the brand asked a question;
   - scores the take's quality (specific, honest, articulate). Quality drives UGC invites, never sentiment: a sharp "this is overpriced and here's why" is worth as much to the brand as praise.
+- **Face reactions on video cards (opt-in):** when a card is a video (an ad, a product demo, a skit), the student can turn on "react mode." The front camera runs on-device face detection (the MediaPipe laugh detector already in the app) only while that video plays, and records a reaction curve: smiles, laughs, and whether their face stayed on screen. No video leaves the phone, only scores and timestamps. It also proves a real person watched, which makes the student's swipe and take on that card count as a **verified-attention** response (worth more points, and billed as a premium response to the brand).
 - **Feed mix (the Pinterest part):** each session interleaves
   - ~60% **exploit:** products close to your taste vector,
   - ~25% **adjacent:** neighbors of things you swiped right ("people who liked this oat milk also liked this tote bag"), which is what makes the feed feel like discovery,
@@ -93,6 +94,7 @@ DTC brands, CPG challengers, apps, and agencies who sell to 18–24-year-olds an
    - **UGC credits:** 1 credit = 1 approved, licensed piece of UGC. The price is set per tier (e.g., raw selfie video vs. edited), and the student's payout is shown up front.
 5. **Watch results live:**
    - **Right-swipe rate** overall and by segment (school, year, gender, taste cluster), with sample sizes and confidence bars.
+   - **Reaction curve** for video creatives: where verified students smiled or laughed second by second, where faces left the screen, and the A/B comparison between two cuts (the curve, A/B, and projector views already built carry over here).
    - **Why:** AI-clustered reasons ("too sweet" 31%, "love the can" 22%), each with real quotes and playable clips where shared.
    - **Versus benchmarks:** your category's average right-swipe rate.
    - **Head-to-head:** run two variants (packaging A vs. B, price $3 vs. $4) as two campaigns and compare.
@@ -120,6 +122,7 @@ Students are "paid" mostly in points and drops for swipes and takes so the feed 
 
 ## 6. Trust, safety, and privacy
 - **Verification:** `.edu` email + device binding; re-verify each semester; ban on duplicate accounts.
+- **Camera:** on only during a video card the student chose to react to, never in the background. Face detection runs on the phone; only scores and timestamps are uploaded.
 - **Voice:** recorded only while the button is held; never in the background. Raw audio is kept only if the student opts in to share it; otherwise only the transcript and extracted fields are kept.
 - **Honesty incentives:** identical rewards for positive and negative takes. Quality scoring rewards specificity, not sentiment.
 - **Brand safety:** product review before campaigns go live (no vapes, gambling, alcohol to under-21s, etc.).
@@ -140,6 +143,8 @@ The full vision is above. For today, one loop on two phones:
 2. **Brand phone/laptop:** create a campaign (photo, name, price, question) → pay credits with **Whop** → live dashboard: right-swipe %, reasons with quotes, the student's take → **Invite** → approve the UGC → student wallet goes up.
 3. **Optional sponsor flourish:** a brand texts a product photo to the **Keiki** iMessage agent to launch a campaign and gets results texted back.
 
+If there's time, react mode on one video card: the existing laugh detector records a curve, and the brand dashboard shows it with the existing curve component.
+
 Must-haves for the demo: seeded catalog of ~40 products across 8 categories (so the feed feels like Pinterest, not 3 cards), swipe gestures, hold-to-talk with transcription + structured extraction, the brand insights screen, and the invite → UGC → approve → paid path.
 
 Cut for today: real email codes, campaign targeting beyond school/interest, embeddings-based ranking (use tag overlap with the taste profile instead), revision requests, rights contracts, and benchmarks.
@@ -147,6 +152,7 @@ Cut for today: real email codes, campaign targeting beyond school/interest, embe
 ### Proposed Convex shape (additive to the current schema)
 - `users` += `email?`, `school?`, `verified?`, `interests?`, `role?` ("student" | "brand"), `points?`, `tasteSummary?`.
 - `products` (new): `brandId, name, imageStorageId | videoStorageId, price?, link?, tags[], question?, status, isCampaign, creditsLeft`.
+- `reactions` (kept): attach to video product cards for react mode (`productId` instead of `gigId`, or keep gigs as video campaigns).
 - `swipes` (new): `productId, userId, dir ("right"|"left"|"save"), dwellMs, valid`.
 - `takes` (new): `productId, userId, transcript, sentiment, reasons[], quote, intent, quality, audioStorageId?, shareAudio`.
 - `ugcInvites` (new): `productId, brandId, userId, takeId, brief, payoutCents, status ("invited"|"accepted"|"submitted"|"approved"|"declined"), videoStorageId?`.
@@ -168,7 +174,7 @@ The repo today is the earlier REAL concept: **creators upload a short clip, reac
 | Convex schema: `users`, `gigs`, `reactions` | ✅ | ⚠️ gigs ≈ campaigns, but no products catalog, swipes, takes, UGC invites, or credits |
 | Creator upload (video picker → Convex storage → `gigs.create/publish`) | ✅ | ✅ becomes "brand creates campaign" (add image support) |
 | Reactor feed (list of gigs, tap to watch) | ✅ plain list | ❌ no swipe cards, no ranking, no recommendation |
-| Watch + on-device laugh detection (MediaPipe in WebView), laugh curve | ✅ proven on iPhone | ➖ not needed for swipes; could stay as an optional "watch the product video" signal |
+| Watch + on-device laugh detection (MediaPipe in WebView), laugh curve | ✅ proven on iPhone | ✅ becomes opt-in "react mode" on video cards and the verified-attention signal |
 | Results dashboard: live curve, A/B compare, stage/projector mode | ✅ | ⚠️ layout reusable; metrics must change to swipe % + reasons + quotes |
 | Wallet: balance, history, streaks, cash-out button (disabled until `payments.cashout` exists) | ✅ | ✅ |
 | Keiki iMessage agent HTTP tools (`/keiki/gig`, `/keiki/results`, `/keiki/status`) | ✅ | ✅ re-point at campaigns |
