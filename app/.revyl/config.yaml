@@ -4,6 +4,9 @@ session:
     idle_timeout_seconds: 1800
 build:
     framework: expo
+    env:
+        EXPO_PUBLIC_CONVEX_URL: https://hip-partridge-245.convex.cloud
+        EXPO_PUBLIC_CONVEX_SITE_URL: https://hip-partridge-245.convex.site
     profiles:
         development:
             ios:
