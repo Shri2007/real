@@ -46,7 +46,7 @@ export default function WalletScreen() {
     return (
       <Screen>
         <Title>Wallet</Title>
-        <Muted>Loading…</Muted>
+        <Muted>Loading wallet…</Muted>
       </Screen>
     );
   }
@@ -95,7 +95,7 @@ export default function WalletScreen() {
 
         <Title>History</Title>
         {wallet.items.length === 0 ? (
-          <EmptyState title="No reactions yet" body="Watch your first clip on the React tab and start earning." />
+          <EmptyState title="No reactions yet" body="No earnings yet: watch a clip on React. You get paid for attention, laugh or not." />
         ) : (
           wallet.items.map((i) => (
             <Card key={i.reactionId} style={{ gap: 4 }}>
