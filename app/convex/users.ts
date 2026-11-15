@@ -37,7 +37,7 @@ export const get = query({
   handler: async (ctx, args) => ctx.db.get(args.userId),
 });
 
-// Reactor wallet: balance + recent reactions (+ optional .edu badge fields).
+// Student wallet: balance + recent reactions and approved UGC payouts (+ optional .edu badge fields).
 export const wallet = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
@@ -51,7 +51,8 @@ export const wallet = query({
       rs.map(async (r) => {
         const gig = await ctx.db.get(r.gigId);
         return {
-          reactionId: r._id,
+          id: r._id as string,
+          kind: "reaction" as "reaction" | "ugc",
           gigTitle: gig?.title ?? "?",
           earnedCents: r.earnedCents,
           valid: r.valid,
@@ -59,6 +60,25 @@ export const wallet = query({
         };
       }),
     );
+    const claims = await ctx.db
+      .query("ugcClaims")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .take(30);
+    for (const c of claims) {
+      if (c.status !== "approved") continue;
+      const opp = await ctx.db.get(c.oppId);
+      const brand = opp && (await ctx.db.get(opp.brandId));
+      items.push({
+        id: c._id,
+        kind: "ugc",
+        gigTitle: `UGC video for ${brand?.name ?? "a brand"}`,
+        earnedCents: opp?.payoutCents ?? 0,
+        valid: true,
+        at: c.approvedAt ?? c._creationTime,
+      });
+    }
+    items.sort((a, b) => b.at - a.at);
     return {
       balanceCents: user?.balanceCents ?? 0,
       items,
