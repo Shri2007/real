@@ -2,9 +2,10 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { bumpTaste } from "./prefs";
+import { notify } from "./notify";
 
-// UGC opportunities: brands post a paid brief; STUDENTS pick the ones they want from their For you feed,
-// record or upload a video, and get paid to their wallet when the brand approves it.
+// UGC opportunities: brands post a paid brief and fund it with Whop (UGC credits); verified STUDENTS pick the
+// ones they want from their For you feed, record or upload a video, and get paid when the brand approves it.
 
 export const create = mutation({
   args: {
@@ -26,13 +27,26 @@ export const create = mutation({
       title: args.title.trim(),
       brief: args.brief.trim(),
       claimed: 0,
-      status: "open",
+      status: "draft",
+      funded: false,
       tags: gig?.tags,
     });
     if (!gig?.tags?.length) {
       await ctx.scheduler.runAfter(0, internal.prefs.tagOpp, { oppId, text: `${args.title}\n${args.brief}${gig ? `\n${gig.title}` : ""}` });
     }
     return oppId;
+  },
+});
+
+// Demo fallback when Whop isn't configured: open the opportunity without funding it.
+export const publishFree = mutation({
+  args: { oppId: v.id("ugcOpps"), brandId: v.id("users") },
+  returns: v.null(),
+  handler: async (ctx, { oppId, brandId }) => {
+    const opp = await ctx.db.get(oppId);
+    if (!opp || opp.brandId !== brandId) throw new Error("Not your opportunity");
+    if (opp.status === "draft") await ctx.db.patch(oppId, { status: "open" });
+    return null;
   },
 });
 
@@ -43,6 +57,8 @@ export const claim = mutation({
     const opp = await ctx.db.get(oppId);
     if (!opp || opp.status !== "open") throw new Error("This opportunity is closed");
     if (opp.brandId === userId) throw new Error("You posted this one");
+    const student = await ctx.db.get(userId);
+    if (!student?.verifiedStudent) throw new Error("UGC jobs are for verified students. Add your .edu email first.");
     const existing = await ctx.db.query("ugcClaims").withIndex("by_oppId_and_userId", (q) => q.eq("oppId", oppId).eq("userId", userId)).unique();
     if (existing) return existing._id;
     const claimed = opp.claimed + 1;
@@ -67,6 +83,11 @@ export const submit = mutation({
     if (claim.status === "approved") throw new Error("Already approved");
     if (claim.videoStorageId && claim.videoStorageId !== videoStorageId) await ctx.storage.delete(claim.videoStorageId);
     await ctx.db.patch(claimId, { videoStorageId, status: "submitted" });
+    const opp = await ctx.db.get(claim.oppId);
+    const student = await ctx.db.get(userId);
+    if (opp) {
+      await notify(ctx, opp.brandId, `${student?.name ?? "A student"}${student?.school ? ` (${student.school})` : ""} submitted a video for "${opp.title}". Review it in REAL, or reply "approve" (claim ${claimId}).`);
+    }
     return null;
   },
 });
@@ -101,8 +122,10 @@ export const forGig = query({
       payoutCents: v.number(),
       spots: v.number(),
       claimed: v.number(),
+      status: v.union(v.literal("draft"), v.literal("open"), v.literal("closed")),
+      funded: v.boolean(),
       claims: v.array(
-        v.object({ claimId: v.id("ugcClaims"), name: v.string(), color: v.string(), status: claimStatus, videoUrl: v.union(v.string(), v.null()) }),
+        v.object({ claimId: v.id("ugcClaims"), name: v.string(), color: v.string(), school: v.optional(v.string()), status: claimStatus, videoUrl: v.union(v.string(), v.null()) }),
       ),
     }),
   ),
@@ -113,11 +136,12 @@ export const forGig = query({
         const claims = await ctx.db.query("ugcClaims").withIndex("by_oppId", (q) => q.eq("oppId", o._id)).take(50);
         return {
           oppId: o._id, title: o.title, brief: o.brief, payoutCents: o.payoutCents, spots: o.spots, claimed: o.claimed,
+          status: o.status, funded: o.funded ?? false,
           claims: await Promise.all(
             claims.map(async (c) => {
               const u = await ctx.db.get(c.userId);
               return {
-                claimId: c._id, name: u?.name ?? "?", color: u?.color ?? "#888", status: c.status,
+                claimId: c._id, name: u?.name ?? "?", color: u?.color ?? "#888", school: u?.school, status: c.status,
                 videoUrl: c.videoStorageId ? await ctx.storage.getUrl(c.videoStorageId) : null,
               };
             }),

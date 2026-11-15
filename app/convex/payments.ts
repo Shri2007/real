@@ -21,40 +21,39 @@ export const gigForCheckout = internalQuery({
   },
 });
 
+async function whopCheckout(title: string, cents: number, metadata: Record<string, string>) {
+  const key = process.env.WHOP_API_KEY;
+  const accountId = process.env.WHOP_COMPANY_ID;
+  if (!key || !accountId) throw new Error("WHOP_API_KEY and WHOP_COMPANY_ID must be set in Convex env");
+  const base = process.env.WHOP_API_BASE ?? "https://sandbox-api.whop.com/api/v1";
+  const res = await fetch(`${base}/checkout_configurations`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      account_id: accountId,
+      mode: "payment",
+      metadata,
+      variant: { account_id: accountId, title: title.slice(0, 80), billing_type: "one_time", currency: "usd", initial_price: cents / 100 },
+    }),
+  });
+  if (!res.ok) throw new Error(`Whop checkout failed: ${res.status} ${await res.text()}`);
+  const checkout = (await res.json()) as { id?: string; purchase_url?: string };
+  if (!checkout.purchase_url) throw new Error("Whop returned no purchase_url");
+  return { id: checkout.id ?? "", url: checkout.purchase_url };
+}
+
 // Whop-hosted checkout for slots × price + platform fee. Also called by the Keiki agent (keiki.ts looks up payments:createCheckout).
 export const createCheckout = internalAction({
   args: { gigId: v.id("gigs") },
   returns: v.object({ url: v.string(), totalCents: v.number() }),
   handler: async (ctx, { gigId }): Promise<{ url: string; totalCents: number }> => {
-    const key = process.env.WHOP_API_KEY;
-    const accountId = process.env.WHOP_COMPANY_ID;
-    if (!key || !accountId) throw new Error("WHOP_API_KEY and WHOP_COMPANY_ID must be set in Convex env");
     const gig = await ctx.runQuery(internal.payments.gigForCheckout, { gigId });
     if (!gig) throw new Error("Gig not found");
     if (gig.paid) throw new Error("This test is already paid");
     const cents = totalCents(gig);
-    const base = process.env.WHOP_API_BASE ?? "https://sandbox-api.whop.com/api/v1";
-    const res = await fetch(`${base}/checkout_configurations`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        account_id: accountId,
-        mode: "payment",
-        metadata: { gigId },
-        variant: {
-          account_id: accountId,
-          title: `REAL test: ${gig.title}`.slice(0, 80),
-          billing_type: "one_time",
-          currency: "usd",
-          initial_price: cents / 100,
-        },
-      }),
-    });
-    if (!res.ok) throw new Error(`Whop checkout failed: ${res.status} ${await res.text()}`);
-    const checkout = (await res.json()) as { id?: string; purchase_url?: string };
-    if (!checkout.purchase_url) throw new Error("Whop returned no purchase_url");
-    await ctx.runMutation(internal.payments.recordCheckout, { gigId, whopCheckoutId: checkout.id ?? "" });
-    return { url: checkout.purchase_url, totalCents: cents };
+    const { id, url } = await whopCheckout(`REAL test: ${gig.title}`, cents, { gigId });
+    await ctx.runMutation(internal.payments.recordCheckout, { gigId, whopCheckoutId: id });
+    return { url, totalCents: cents };
   },
 });
 
@@ -67,19 +66,57 @@ export const checkout = action({
 });
 
 export const recordCheckout = internalMutation({
-  args: { gigId: v.id("gigs"), whopCheckoutId: v.string() },
+  args: { gigId: v.optional(v.id("gigs")), oppId: v.optional(v.id("ugcOpps")), whopCheckoutId: v.string() },
   returns: v.null(),
-  handler: async (ctx, { gigId, whopCheckoutId }) => {
-    if (whopCheckoutId) await ctx.db.patch(gigId, { whopCheckoutId });
+  handler: async (ctx, { gigId, oppId, whopCheckoutId }) => {
+    if (!whopCheckoutId) return null;
+    if (gigId) await ctx.db.patch(gigId, { whopCheckoutId });
+    if (oppId) await ctx.db.patch(oppId, { whopCheckoutId });
     return null;
   },
 });
 
+export const oppForCheckout = internalQuery({
+  args: { oppId: v.id("ugcOpps") },
+  returns: v.union(v.object({ title: v.string(), payoutCents: v.number(), spots: v.number(), funded: v.boolean() }), v.null()),
+  handler: async (ctx, { oppId }) => {
+    const o = await ctx.db.get(oppId);
+    return o && { title: o.title, payoutCents: o.payoutCents, spots: o.spots, funded: o.funded ?? false };
+  },
+});
+
+// UGC credits: a brand funds payout × spots + fee before students can pick the opportunity.
+export const createUgcCheckout = internalAction({
+  args: { oppId: v.id("ugcOpps") },
+  returns: v.object({ url: v.string(), totalCents: v.number() }),
+  handler: async (ctx, { oppId }): Promise<{ url: string; totalCents: number }> => {
+    const opp = await ctx.runQuery(internal.payments.oppForCheckout, { oppId });
+    if (!opp) throw new Error("Opportunity not found");
+    if (opp.funded) throw new Error("This opportunity is already funded");
+    const cents = totalCents({ slots: opp.spots, priceCents: opp.payoutCents });
+    const { id, url } = await whopCheckout(`REAL UGC credits: ${opp.title}`, cents, { oppId });
+    await ctx.runMutation(internal.payments.recordCheckout, { oppId, whopCheckoutId: id });
+    return { url, totalCents: cents };
+  },
+});
+
+export const checkoutUgc = action({
+  args: { oppId: v.id("ugcOpps") },
+  returns: v.object({ url: v.string(), totalCents: v.number() }),
+  handler: async (ctx, args): Promise<{ url: string; totalCents: number }> =>
+    ctx.runAction(internal.payments.createUgcCheckout, args),
+});
+
 export const markPaid = internalMutation({
-  args: { gigId: v.string(), whopPaymentId: v.string() },
+  args: { gigId: v.optional(v.string()), oppId: v.optional(v.string()), whopPaymentId: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const gigId = ctx.db.normalizeId("gigs", args.gigId);
+    const oppId = args.oppId ? ctx.db.normalizeId("ugcOpps", args.oppId) : null;
+    const opp = oppId && (await ctx.db.get(oppId));
+    if (opp && !opp.funded) {
+      await ctx.db.patch(opp._id, { funded: true, whopPaymentId: args.whopPaymentId, status: opp.status === "draft" ? "open" : opp.status });
+    }
+    const gigId = args.gigId ? ctx.db.normalizeId("gigs", args.gigId) : null;
     const gig = gigId && (await ctx.db.get(gigId));
     if (!gig || gig.paid) return null;
     await ctx.db.patch(gig._id, {
@@ -121,9 +158,11 @@ export const webhook = httpAction(async (ctx, req) => {
   const sig = req.headers.get("webhook-signature") ?? "";
   if (!secret || !(await verify(secret, id, ts, body, sig))) return new Response("Invalid signature", { status: 401 });
   const event = JSON.parse(body) as { type?: string; data?: { id?: string; metadata?: Record<string, unknown> | null } };
-  const gigId = event.data?.metadata?.gigId;
-  if (event.type === "payment.succeeded" && typeof gigId === "string") {
-    await ctx.runMutation(internal.payments.markPaid, { gigId, whopPaymentId: event.data?.id ?? "" });
+  const meta = event.data?.metadata ?? {};
+  const gigId = typeof meta.gigId === "string" ? meta.gigId : undefined;
+  const oppId = typeof meta.oppId === "string" ? meta.oppId : undefined;
+  if (event.type === "payment.succeeded" && (gigId || oppId)) {
+    await ctx.runMutation(internal.payments.markPaid, { gigId, oppId, whopPaymentId: event.data?.id ?? "" });
   }
   return new Response("OK", { status: 200 });
 });

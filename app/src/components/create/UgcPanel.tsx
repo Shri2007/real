@@ -1,4 +1,5 @@
-import { useMutation, useQuery } from 'convex/react';
+import { useAction, useMutation, useQuery } from 'convex/react';
+import { openBrowserAsync } from 'expo-web-browser';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
@@ -22,6 +23,8 @@ export function UgcPanel({ gigId, brandId, gigTitle }: { gigId: Id<'gigs'>; bran
   const opps = useQuery(api.ugc.forGig, { gigId });
   const create = useMutation(api.ugc.create);
   const review = useMutation(api.ugc.review);
+  const fund = useAction(api.payments.checkoutUgc);
+  const publishFree = useMutation(api.ugc.publishFree);
   const [open, setOpen] = useState(false);
   const [brief, setBrief] = useState('');
   const [payout, setPayout] = useState('25');
@@ -42,13 +45,26 @@ export function UgcPanel({ gigId, brandId, gigTitle }: { gigId: Id<'gigs'>; bran
 
   return <Card style={{ gap: tokens.space.md }}>
     <Body>UGC from verified students</Body>
-    <Muted>Post a paid brief. Students who are into this kind of content pick it from their feed, film it, and you approve before paying.</Muted>
+    <Muted>Post a paid brief and fund it with Whop UGC credits. Verified students who are into this kind of content pick it from their feed, film it, and you approve before they're paid.</Muted>
     {opps?.map((o) => <View key={o.oppId} style={{ gap: tokens.space.sm }}>
-      <View style={mediaLayout.row}><Badge tone="live">{o.claimed}/{o.spots} picked</Badge><Money cents={o.payoutCents} /><Muted>per video</Muted></View>
+      <View style={mediaLayout.row}>
+        <Badge tone={o.status === 'draft' ? 'muted' : 'live'}>{o.status === 'draft' ? 'Not live: fund it' : `${o.claimed}/${o.spots} picked`}</Badge>
+        {o.funded && <Badge tone="good">Funded via Whop</Badge>}
+        <Money cents={o.payoutCents} /><Muted>per video</Muted>
+      </View>
       <Body>{o.brief}</Body>
+      {o.status === 'draft' && <>
+        <Button label={`Fund $${(o.payoutCents * o.spots * 1.2 / 100).toFixed(2)} with Whop`} onPress={async () => {
+          setError('');
+          try { const { url } = await fund({ oppId: o.oppId }); await openBrowserAsync(url); } catch { setError('Whop checkout is unavailable. Use the free demo option.'); }
+        }} />
+        <Muted>Includes a 20% platform fee. It goes live in students' feeds as soon as Whop confirms.</Muted>
+        <Button label="Open it free (demo)" variant="secondary" onPress={() => publishFree({ oppId: o.oppId, brandId })} />
+      </>}
       {o.claims.map((c) => <View key={c.claimId} style={{ gap: tokens.space.sm }}>
         <View style={mediaLayout.row}>
           <Avatar name={c.name} color={c.color} size={28} /><Body>{c.name}</Body>
+          {c.school && <Badge tone="good">✓ {c.school}</Badge>}
           <Badge tone={c.status === 'approved' ? 'good' : c.status === 'rejected' ? 'bad' : 'muted'}>{c.status === 'claimed' ? 'filming' : c.status}</Badge>
         </View>
         {c.videoUrl && <Submission uri={c.videoUrl} />}
@@ -66,9 +82,9 @@ export function UgcPanel({ gigId, brandId, gigTitle }: { gigId: Id<'gigs'>; bran
         <TextInput accessibilityLabel="Spots" value={spots} onChangeText={setSpots} keyboardType="number-pad" style={[mediaLayout.input, { flex: 1 }]} />
         <Muted>spots</Muted>
       </View>
-      {!!error && <Body>{error}</Body>}
-      <Button label={busy ? 'Posting…' : 'Post UGC opportunity'} disabled={busy || !brief.trim()} onPress={post} />
+      <Button label={busy ? 'Posting…' : 'Create UGC opportunity'} disabled={busy || !brief.trim()} onPress={post} />
       <Button label="Cancel" variant="secondary" onPress={() => setOpen(false)} />
     </> : <Button label="Post a UGC opportunity" variant="secondary" onPress={() => setOpen(true)} />}
+    {!!error && <Body>{error}</Body>}
   </Card>;
 }
