@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 
 export const generateUploadUrl = mutation({
   args: {},
@@ -17,8 +18,11 @@ export const create = mutation({
     priceCents: v.number(),
     slots: v.number(),
   },
-  handler: async (ctx, args) =>
-    ctx.db.insert("gigs", { ...args, filled: 0, status: "draft", paid: false }),
+  handler: async (ctx, args) => {
+    const gigId = await ctx.db.insert("gigs", { ...args, filled: 0, status: "draft", paid: false });
+    await ctx.scheduler.runAfter(0, internal.prefs.tagGig, { gigId, text: `${args.title}${args.question ? `\n${args.question}` : ""}` });
+    return gigId;
+  },
 });
 
 // Make a gig visible to reactors. Lane D calls this after Whop payment succeeds;

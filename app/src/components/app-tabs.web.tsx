@@ -17,6 +17,9 @@ export default function AppTabs() {
       <TabSlot style={{ height: '100%' }} />
       <TabList asChild>
         <CustomTabList>
+          <TabTrigger name="foryou" href="/foryou" asChild>
+            <TabButton webSymbol="auto_awesome">For you</TabButton>
+          </TabTrigger>
           <TabTrigger name="index" href="/" asChild>
             <TabButton webSymbol="sentiment_satisfied">React</TabButton>
           </TabTrigger>
@@ -37,7 +40,7 @@ export function TabButton({
   isFocused,
   webSymbol,
   ...props
-}: TabTriggerSlotProps & { webSymbol: 'sentiment_satisfied' | 'video_call' | 'attach_money' }) {
+}: TabTriggerSlotProps & { webSymbol: 'auto_awesome' | 'sentiment_satisfied' | 'video_call' | 'attach_money' }) {
   // TabTrigger passes a mismatched ref type into asChild; drop it for Pressable.
   const { ref: _ref, ...rest } = props as TabTriggerSlotProps & { ref?: unknown };
   return (

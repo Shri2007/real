@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
+import { bumpTaste } from "./prefs";
 
 declare const process: { env: Record<string, string | undefined> };
 
@@ -67,6 +68,8 @@ export const saveWhy = internalMutation({
     const reaction = await ctx.db.get(reactionId);
     if (!reaction || reaction.whyAudioStorageId !== audioStorageId) return null;
     await ctx.db.patch(reactionId, fields);
+    const gig = await ctx.db.get(reaction.gigId);
+    await bumpTaste(ctx, reaction.reactorId, gig?.tags, fields.whySentiment === "pos" ? 1 : fields.whySentiment === "neg" ? -1 : 0);
     return null;
   },
 });
