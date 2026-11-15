@@ -1,18 +1,32 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { ConvexProvider, ConvexReactClient } from 'convex/react';
+import { DarkTheme, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
+import { Onboarding } from '@/components/onboarding';
+import { SessionProvider, useSession } from '@/lib/session';
 
 SplashScreen.preventAutoHideAsync();
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+const convex = new ConvexReactClient(process.env.EXPO_PUBLIC_CONVEX_URL!, { unsavedChangesWarning: false });
+
+function Gate() {
+  const { ready, userId, groupId } = useSession();
+  if (!ready) return null;
+  if (!userId || !groupId) return <Onboarding />;
+  return <AppTabs />;
+}
+
+export default function RootLayout() {
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <ConvexProvider client={convex}>
+      <SessionProvider>
+        <ThemeProvider value={DarkTheme}>
+          <AnimatedSplashOverlay />
+          <Gate />
+        </ThemeProvider>
+      </SessionProvider>
+    </ConvexProvider>
   );
 }
