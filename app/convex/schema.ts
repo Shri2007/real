@@ -9,8 +9,9 @@ export default defineSchema({
   users: defineTable({
     name: v.string(),
     color: v.string(),
+    handle: v.optional(v.string()), // Keiki conversation/sender identity
     balanceCents: v.number(), // reactor earnings (demo wallet; Whop handles real payouts)
-  }),
+  }).index("by_handle", ["handle"]),
 
   gigs: defineTable({
     creatorId: v.id("users"),
