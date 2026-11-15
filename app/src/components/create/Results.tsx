@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { View } from 'react-native';
-import { useMutation, useQuery } from 'convex/react';
+import { useAction, useMutation, useQuery } from 'convex/react';
 import { Avatar, Badge, Body, Button, Card, Muted, Title, tokens } from '@/ui';
 import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
@@ -50,11 +50,28 @@ function ResultsContent({ gigId, label }: { gigId: Id<'gigs'>; label?: string })
       <Avatar name={reactor.name} color={reactor.color} /><Body>{reactor.name}</Body><Badge tone={reactor.laughed ? 'good' : 'muted'}>{reactor.laughed ? 'Laughed' : 'Stayed deadpan'}</Badge>
     </View>)}
     <WhatPeopleSaid gigId={gigId} />
+    {results.count > 0 && <AiReport gigId={gigId} report={gig.report} />}
     {gig.status === 'draft' && <>
       <Muted>Saved draft. Video duration must be verified at 30 seconds or less before publishing.</Muted>
       <Button label={busy ? 'Publishing…' : 'Publish saved draft (free test)'} disabled={busy || !validDuration(duration)} onPress={publishDraft} />
     </>}
     {!!error && <Body>{error}</Body>}
+  </Card>;
+}
+
+function AiReport({ gigId, report }: { gigId: Id<'gigs'>; report?: string[] }) {
+  const write = useAction(api.report.forGig);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  return <Card style={{ gap: tokens.space.sm }}>
+    <Body>What to fix</Body>
+    {report?.length ? report.map((b, i) => <Body key={i}>• {b}</Body>) : <Muted>No AI report yet. It's written automatically when every slot fills.</Muted>}
+    {!!error && <Body>{error}</Body>}
+    <Button label={busy ? 'Writing report…' : report?.length ? 'Rewrite AI report' : 'Write AI report now'} variant="secondary" disabled={busy} onPress={async () => {
+      setBusy(true);
+      setError('');
+      try { await write({ gigId }); } catch { setError('Could not write the report. Try again.'); } finally { setBusy(false); }
+    }} />
   </Card>;
 }
 

@@ -25,6 +25,8 @@ export default defineSchema({
     status: v.union(v.literal("draft"), v.literal("live"), v.literal("done")),
     paid: v.boolean(), // Whop checkout completed
     whopCheckoutId: v.optional(v.string()),
+    whopPaymentId: v.optional(v.string()),
+    report: v.optional(v.array(v.string())), // AI "what to fix" bullets
   })
     .index("by_status", ["status"])
     .index("by_creatorId", ["creatorId"]),
@@ -50,4 +52,11 @@ export default defineSchema({
     .index("by_gigId", ["gigId"])
     .index("by_reactorId", ["reactorId"])
     .index("by_gigId_and_reactorId", ["gigId", "reactorId"]),
+
+  // Reactor cash-out requests (paid out via Whop).
+  payouts: defineTable({
+    userId: v.id("users"),
+    amountCents: v.number(),
+    status: v.union(v.literal("pending"), v.literal("paid")),
+  }).index("by_userId", ["userId"]),
 });
