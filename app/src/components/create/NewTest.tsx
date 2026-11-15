@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react';
+import type { ComponentRef } from 'react';
 import { Platform, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useAction, useMutation } from 'convex/react';
 import { openBrowserAsync } from 'expo-web-browser';
-import { Body, Button, Card, Muted, tokens } from '@/ui';
+import { Badge, Body, Button, Card, Money, Muted, PrimaryCTA, SectionHeader, tokens } from '@/ui';
 import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
 import { ClipPlayer } from './ClipPlayer';
@@ -22,6 +23,7 @@ export function NewTest({ userId, onDone, onCancel }: { userId: Id<'users'>; onD
   const [price, setPrice] = useState('50');
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
+  const inputs = useRef<Record<string, ComponentRef<typeof TextInput> | null>>({});
   const [draft, setDraft] = useState<Id<'gigs'> | null>(null);
   const [error, setError] = useState('');
   const [step, setStep] = useState('');
@@ -81,24 +83,37 @@ export function NewTest({ userId, onDone, onCancel }: { userId: Id<'users'>; onD
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not publish. Please retry.'); }
     finally { lock.current = false; setBusy(false); setStep(''); }
   };
-  return <Card style={{ gap: tokens.space.md }}>
-    <Body>New test · one cut</Body>
-    <Muted>Create a second test for your other cut, then select A and B in My tests. Pay with Whop to go live, or publish a free demo test.</Muted>
-    <Button label={asset ? 'Choose another video' : 'Choose video (up to 30s)'} onPress={pick} disabled={busy || !!draft} />
+  return <Card style={{ gap: tokens.space.lg }}>
+    <View style={{ gap: tokens.space.xs }}>
+      <Badge tone="good">NEW REACTION TEST</Badge>
+      <SectionHeader title="One video. One question." />
+      <Muted>Find the moment your audience responds to.</Muted>
+    </View>
+    <Button label={asset ? 'Choose another video' : '＋  Choose video · up to 30s'} variant={asset ? 'secondary' : 'primary'} onPress={pick} disabled={busy || !!draft} />
     {asset && <>
       <ClipPlayer key={asset.uri} uri={asset.uri} onDuration={setDuration} />
       <Muted>{duration === 0 ? 'Checking video duration…' : validDuration(duration) ? `${duration.toFixed(1)}s · duration verified` : 'Video exceeds 30 seconds. Choose a shorter clip.'}</Muted>
     </>}
+    <View style={{ gap: tokens.space.md }}>
     {([
       ['Title', title, setTitle, false], ['Question (optional)', question, setQuestion, false], ['Reaction slots', slots, setSlots, true], ['Cents per reaction', price, setPrice, true],
     ] as const).map(([label, value, change, numeric]) => <View key={label} style={{ gap: tokens.space.xs }}>
       <Body>{label}</Body>
-      <TextInput accessibilityLabel={label} value={value} onChangeText={change} editable={!busy && !draft} keyboardType={numeric ? 'number-pad' : 'default'} placeholderTextColor={tokens.muted} style={{ color: tokens.text, borderColor: tokens.cardBorder, borderWidth: 1, borderRadius: tokens.radiusSm, padding: tokens.space.md, fontSize: tokens.type.body }} />
+      <View style={{ flexDirection: 'row', gap: tokens.space.xs, alignItems: 'center' }}>
+        {numeric && <Button label="−" variant="secondary" disabled={busy || !!draft || Number(value) <= 1} onPress={() => change(String(Math.max(1, Number(value || 1) - (label === 'Reaction slots' ? 1 : 25))))} style={{ minWidth: 48 }} />}
+        <TextInput ref={(ref) => { inputs.current[label] = ref; }} returnKeyType="done" onSubmitEditing={() => inputs.current[label]?.blur()} accessibilityLabel={label} value={value} onChangeText={change} editable={!busy && !draft} keyboardType={numeric ? 'number-pad' : 'default'} placeholderTextColor={tokens.muted} style={{ flex: 1, color: tokens.text, backgroundColor: tokens.cardRaised, borderColor: tokens.cardBorder, borderWidth: 1, borderRadius: tokens.radiusSm, padding: tokens.space.md, fontSize: tokens.type.body }} />
+        {numeric && <Button label="+" variant="secondary" disabled={busy || !!draft} onPress={() => change(String(Number(value || 0) + (label === 'Reaction slots' ? 1 : 25)))} style={{ minWidth: 48 }} />}
+      </View>
     </View>)}
+    </View>
     {draft && <Muted>Draft saved. Retry publishes this same test without uploading or creating another. You can also return to My tests and open this draft.</Muted>}
     {!!error && <Body>{error}</Body>}
-    <Button label={busy ? step || 'Choosing video…' : `Pay ${positiveInteger(slots) && positiveInteger(price) ? `$${(Number(slots) * Number(price) * 1.2 / 100).toFixed(2)} ` : ''}with Whop`} onPress={() => submit('pay')} disabled={busy || (!draft && (!validDuration(duration) || !title.trim() || !positiveInteger(slots) || !positiveInteger(price)))} />
-    {!busy && <Muted>Includes a 20% platform fee. The test goes live as soon as Whop confirms payment.</Muted>}
+    {positiveInteger(slots) && positiveInteger(price) && <Card style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: tokens.space.md, backgroundColor: tokens.cardRaised }}>
+      <View style={{ flex: 1, gap: 2 }}><Muted>YOUR TEST BUDGET · 20% FEE INCLUDED</Muted><Body>{slots} reactions × ${(Number(price) / 100).toFixed(2)}</Body></View>
+      <Money cents={Number(slots) * Number(price) * 1.2} />
+    </Card>}
+    <PrimaryCTA label={busy ? step || 'Choosing video…' : `Pay with Whop · ${positiveInteger(slots) && positiveInteger(price) ? `$${(Number(slots) * Number(price) * 1.2 / 100).toFixed(2)}` : ''}`} onPress={() => submit('pay')} disabled={busy || (!draft && (!validDuration(duration) || !title.trim() || !positiveInteger(slots) || !positiveInteger(price)))} />
+    {!busy && <Muted>The test goes live as soon as Whop confirms payment.</Muted>}
     <Button label={draft ? 'Retry publishing saved draft (free demo)' : 'Publish free demo test'} variant="secondary" onPress={() => submit('free')} disabled={busy || (!draft && (!validDuration(duration) || !title.trim() || !positiveInteger(slots) || !positiveInteger(price)))} />
     <Button label="Back to My tests" variant="secondary" onPress={onCancel} disabled={busy} />
   </Card>;
