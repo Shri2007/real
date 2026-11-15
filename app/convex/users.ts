@@ -1,11 +1,41 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
+/** Domain-only .edu check (no email code). "name@berkeley.edu" → { email, school: "Berkeley", verifiedStudent: true }. */
+export function parseEduEmail(raw: string | undefined): {
+  email?: string;
+  school?: string;
+  verifiedStudent?: boolean;
+} {
+  if (!raw) return {};
+  const email = raw.trim().toLowerCase();
+  const at = email.lastIndexOf("@");
+  if (at < 1) return { email };
+  const domain = email.slice(at + 1);
+  if (!domain.endsWith(".edu")) return { email };
+  const withoutEdu = domain.slice(0, -".edu".length);
+  const label = withoutEdu.split(".").filter(Boolean).pop();
+  if (!label) return { email };
+  const school = label.charAt(0).toUpperCase() + label.slice(1);
+  return { email, school, verifiedStudent: true };
+}
+
 // Name-only identity for the hackathon (no auth): the app stores userId on the device.
 export const create = mutation({
-  args: { name: v.string(), color: v.string() },
-  handler: async (ctx, args) =>
-    ctx.db.insert("users", { name: args.name.trim(), color: args.color, balanceCents: 0 }),
+  args: {
+    name: v.string(),
+    color: v.string(),
+    email: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const edu = parseEduEmail(args.email);
+    return ctx.db.insert("users", {
+      name: args.name.trim(),
+      color: args.color,
+      balanceCents: 0,
+      ...edu,
+    });
+  },
 });
 
 export const get = query({
@@ -13,7 +43,7 @@ export const get = query({
   handler: async (ctx, args) => ctx.db.get(args.userId),
 });
 
-// Reactor wallet: balance + recent reactions.
+// Reactor wallet: balance + recent reactions (+ optional .edu badge fields).
 export const wallet = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
@@ -26,9 +56,20 @@ export const wallet = query({
     const items = await Promise.all(
       rs.map(async (r) => {
         const gig = await ctx.db.get(r.gigId);
-        return { reactionId: r._id, gigTitle: gig?.title ?? "?", earnedCents: r.earnedCents, valid: r.valid, at: r._creationTime };
+        return {
+          reactionId: r._id,
+          gigTitle: gig?.title ?? "?",
+          earnedCents: r.earnedCents,
+          valid: r.valid,
+          at: r._creationTime,
+        };
       }),
     );
-    return { balanceCents: user?.balanceCents ?? 0, items };
+    return {
+      balanceCents: user?.balanceCents ?? 0,
+      items,
+      verifiedStudent: user?.verifiedStudent ?? false,
+      school: user?.school,
+    };
   },
 });

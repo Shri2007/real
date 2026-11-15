@@ -81,12 +81,21 @@ export const results = query({
     const reactors = await Promise.all(
       rs.map(async (r) => {
         const u = await ctx.db.get(r.reactorId);
-        return { name: u?.name ?? "?", color: u?.color ?? "#888", laughed: r.laughed, peak: r.peak };
+        return {
+          name: u?.name ?? "?",
+          color: u?.color ?? "#888",
+          laughed: r.laughed,
+          peak: r.peak,
+          verifiedStudent: u?.verifiedStudent ?? false,
+          school: u?.school,
+        };
       }),
     );
+    const verifiedStudentCount = reactors.filter((r) => r.verifiedStudent).length;
     return {
       count: rs.length,
       laughedCount: rs.filter((r) => r.laughed).length,
+      verifiedStudentCount,
       curve,
       peakSec: peakMoment?.sec ?? null,
       reactors,
