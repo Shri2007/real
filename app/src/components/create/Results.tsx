@@ -8,6 +8,7 @@ import { ClipPlayer } from './ClipPlayer';
 import { ReactionCurve } from './ReactionCurve';
 import { abVerdict, dropOffs, laughOnset, validDuration } from './curve';
 import { PresentButton } from '../stage';
+import { UgcPanel } from './UgcPanel';
 
 export function Results({ gigId, label }: { gigId: Id<'gigs'>; label?: string }) {
   return <PresentButton gigId={gigId}><ResultsContent gigId={gigId} label={label} /></PresentButton>;
@@ -51,6 +52,7 @@ function ResultsContent({ gigId, label }: { gigId: Id<'gigs'>; label?: string })
     </View>)}
     <WhatPeopleSaid gigId={gigId} />
     {results.count > 0 && <AiReport gigId={gigId} report={gig.report} />}
+    <UgcPanel gigId={gigId} brandId={gig.creatorId} gigTitle={gig.title} />
     {gig.status === 'draft' && <>
       <Muted>Saved draft. Video duration must be verified at 30 seconds or less before publishing.</Muted>
       <Button label={busy ? 'Publishing…' : 'Publish saved draft (free test)'} disabled={busy || !validDuration(duration)} onPress={publishDraft} />

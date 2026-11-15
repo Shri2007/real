@@ -9,6 +9,10 @@ export default function AppTabs() {
       tintColor={tokens.accent}
       labelStyle={{ fontSize: 11, fontWeight: '600' }}
     >
+      <NativeTabs.Trigger name="foryou">
+        <NativeTabs.Trigger.Label>For you</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="sparkles" md="auto_awesome" />
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>React</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="face.smiling" md="sentiment_satisfied" />

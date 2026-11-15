@@ -11,6 +11,7 @@ export default defineSchema({
     color: v.string(),
     handle: v.optional(v.string()), // Keiki conversation/sender identity
     balanceCents: v.number(), // reactor earnings (demo wallet; Whop handles real payouts)
+    taste: v.optional(v.array(v.object({ tag: v.string(), w: v.number() }))), // preference engine weights
   }).index("by_handle", ["handle"]),
 
   gigs: defineTable({
@@ -27,6 +28,7 @@ export default defineSchema({
     whopCheckoutId: v.optional(v.string()),
     whopPaymentId: v.optional(v.string()),
     report: v.optional(v.array(v.string())), // AI "what to fix" bullets
+    tags: v.optional(v.array(v.string())), // AI tags for the For you feed
   })
     .index("by_status", ["status"])
     .index("by_creatorId", ["creatorId"]),
@@ -52,6 +54,39 @@ export default defineSchema({
     .index("by_gigId", ["gigId"])
     .index("by_reactorId", ["reactorId"])
     .index("by_gigId_and_reactorId", ["gigId", "reactorId"]),
+
+  // For you feed swipes (one per user per item).
+  swipes: defineTable({
+    userId: v.id("users"),
+    gigId: v.optional(v.id("gigs")),
+    oppId: v.optional(v.id("ugcOpps")),
+    dir: v.union(v.literal("right"), v.literal("left")),
+  }).index("by_userId_and_item", ["userId", "gigId", "oppId"]),
+
+  // Paid UGC briefs brands post; students pick them from their feed.
+  ugcOpps: defineTable({
+    brandId: v.id("users"),
+    gigId: v.optional(v.id("gigs")),
+    title: v.string(),
+    brief: v.string(),
+    payoutCents: v.number(),
+    spots: v.number(),
+    claimed: v.number(),
+    status: v.union(v.literal("open"), v.literal("closed")),
+    tags: v.optional(v.array(v.string())),
+  })
+    .index("by_status", ["status"])
+    .index("by_gigId", ["gigId"]),
+
+  ugcClaims: defineTable({
+    oppId: v.id("ugcOpps"),
+    userId: v.id("users"),
+    status: v.union(v.literal("claimed"), v.literal("submitted"), v.literal("approved"), v.literal("rejected")),
+    videoStorageId: v.optional(v.id("_storage")),
+  })
+    .index("by_oppId", ["oppId"])
+    .index("by_userId", ["userId"])
+    .index("by_oppId_and_userId", ["oppId", "userId"]),
 
   // Reactor cash-out requests (paid out via Whop).
   payouts: defineTable({

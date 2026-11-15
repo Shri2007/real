@@ -12,8 +12,10 @@ import type * as gigs from "../gigs.js";
 import type * as http from "../http.js";
 import type * as keiki from "../keiki.js";
 import type * as payments from "../payments.js";
+import type * as prefs from "../prefs.js";
 import type * as reactions from "../reactions.js";
 import type * as report from "../report.js";
+import type * as ugc from "../ugc.js";
 import type * as users from "../users.js";
 import type * as voice from "../voice.js";
 
@@ -28,8 +30,10 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   keiki: typeof keiki;
   payments: typeof payments;
+  prefs: typeof prefs;
   reactions: typeof reactions;
   report: typeof report;
+  ugc: typeof ugc;
   users: typeof users;
   voice: typeof voice;
 }>;
