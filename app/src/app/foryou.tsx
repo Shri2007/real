@@ -1,8 +1,9 @@
 import { useMutation, useQuery } from 'convex/react';
 import { useState } from 'react';
-import { ScrollView, TextInput, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { FeedCard } from '@/components/foryou/FeedCard';
 import { MyUgc } from '@/components/foryou/MyUgc';
+import { EduVerify } from '@/components/EduVerify';
 import { Watch } from '@/components/react/Watch';
 import { useSession } from '@/lib/session';
 import { Badge, Body, Button, Card, EmptyState, Muted, Screen, Title, VerifiedStudentBadge, tokens } from '@/ui';
@@ -17,8 +18,6 @@ export default function ForYouScreen() {
   const swipe = useMutation(api.prefs.swipe);
   const claim = useMutation(api.ugc.claim);
   const me = useQuery(api.users.get, userId ? { userId } : 'skip');
-  const verify = useMutation(api.users.verify);
-  const [email, setEmail] = useState('');
   const [askVerify, setAskVerify] = useState(false);
   const [tab, setTab] = useState<'feed' | 'mine'>('feed');
   const [watching, setWatching] = useState<Id<'gigs'> | null>(null);
@@ -71,13 +70,7 @@ export default function ForYouScreen() {
         />
         {askVerify && !me?.verifiedStudent && <Card style={{ gap: tokens.space.sm }}>
           <Body>UGC jobs are for verified students</Body>
-          <Muted>Add your school email. Brands pay for verified Gen Z.</Muted>
-          <TextInput accessibilityLabel="School email" placeholder="you@school.edu" placeholderTextColor={tokens.muted} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address"
-            style={{ color: tokens.text, borderColor: tokens.cardBorder, borderWidth: 1, borderRadius: tokens.radiusSm, padding: tokens.space.md, fontSize: tokens.type.body }} />
-          <Button label="Verify" disabled={!email.trim()} onPress={async () => {
-            setError('');
-            try { await verify({ userId, email }); setAskVerify(false); } catch (e) { setError(e instanceof Error && /\.edu/.test(e.message) ? 'Use your school email ending in .edu' : 'Could not verify. Try again.'); }
-          }} />
+          <EduVerify userId={userId} onVerified={() => setAskVerify(false)} />
         </Card>}
         {me?.verifiedStudent && top.kind === 'ugc' && <VerifiedStudentBadge school={me.school} />}
         <Muted>{feed.length - 1} more in your feed</Muted>

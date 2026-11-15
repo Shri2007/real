@@ -20,6 +20,7 @@ import type * as report from "../report.js";
 import type * as seed from "../seed.js";
 import type * as ugc from "../ugc.js";
 import type * as users from "../users.js";
+import type * as verify from "../verify.js";
 import type * as voice from "../voice.js";
 
 import type {
@@ -41,6 +42,7 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   ugc: typeof ugc;
   users: typeof users;
+  verify: typeof verify;
   voice: typeof voice;
 }>;
 

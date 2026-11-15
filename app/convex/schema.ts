@@ -15,8 +15,19 @@ export default defineSchema({
     // Optional .edu verification (Lane E) — all additive / optional
     email: v.optional(v.string()),
     school: v.optional(v.string()), // derived from domain, e.g. berkeley.edu → Berkeley
-    verifiedStudent: v.optional(v.boolean()),
-  }).index("by_handle", ["handle"]),
+    verifiedStudent: v.optional(v.boolean()), // set only after the emailed code is confirmed (verify.ts)
+  })
+    .index("by_handle", ["handle"])
+    .index("by_email", ["email"]),
+
+  // Pending .edu email codes (hashed), one per user.
+  emailCodes: defineTable({
+    userId: v.id("users"),
+    email: v.string(),
+    codeHash: v.string(),
+    expiresAt: v.number(),
+    attempts: v.number(),
+  }).index("by_userId", ["userId"]),
 
   gigs: defineTable({
     creatorId: v.id("users"),
