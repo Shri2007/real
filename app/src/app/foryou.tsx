@@ -6,7 +6,7 @@ import { MyUgc } from '@/components/foryou/MyUgc';
 import { EduVerify } from '@/components/EduVerify';
 import { Watch } from '@/components/react/Watch';
 import { useSession } from '@/lib/session';
-import { Badge, Body, Button, Card, EmptyState, Muted, Screen, Title, VerifiedStudentBadge, tokens } from '@/ui';
+import { Badge, Body, Button, Card, EmptyState, Muted, Screen, SectionHeader, Title, VerifiedStudentBadge, tokens } from '@/ui';
 import { api } from '../../convex/_generated/api';
 import { Id } from '../../convex/_generated/dataModel';
 
@@ -36,20 +36,24 @@ export default function ForYouScreen() {
     } catch (e) { setError(e instanceof Error ? e.message : 'Something went wrong. Try again.'); }
   };
 
-  return <Screen><ScrollView contentContainerStyle={{ gap: tokens.space.lg, paddingBottom: tokens.space.xxl }}>
-    <Title>For you</Title>
-    <View style={{ flexDirection: 'row', gap: tokens.space.sm }}>
+  return <Screen><ScrollView contentContainerStyle={{ gap: tokens.space.xl, paddingBottom: tokens.space.xxl }}>
+    <View style={{ gap: tokens.space.xs }}>
+      <Muted>REAL · YOUR REACTION FEED</Muted>
+      <Title style={{ fontSize: 36 }}>For you</Title>
+      <Body>Good clips. Real people. Paid attention.</Body>
+    </View>
+    <View style={{ flexDirection: 'row', gap: tokens.space.sm, padding: 4, borderRadius: tokens.radius, backgroundColor: tokens.card }}>
       <Button label="Feed" variant={tab === 'feed' ? 'primary' : 'secondary'} onPress={() => setTab('feed')} style={{ flex: 1 }} />
       <Button label="My UGC" variant={tab === 'mine' ? 'primary' : 'secondary'} onPress={() => setTab('mine')} style={{ flex: 1 }} />
     </View>
     {tab === 'mine' ? <MyUgc userId={userId} /> : <>
       {taste && (taste.liked.length > 0 || taste.disliked.length > 0) ? <View style={{ gap: tokens.space.xs }}>
-        <Muted>Your taste so far · {taste.signals} swipes & reactions</Muted>
+        <SectionHeader title="Your taste" detail={`${taste.signals} signals`} />
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space.xs }}>
           {taste.liked.map((t) => <Badge key={t.tag} tone="good">{t.tag}</Badge>)}
           {taste.disliked.map((t) => <Badge key={t.tag} tone="bad">not {t.tag}</Badge>)}
         </View>
-      </View> : <Body>Swipe right on what you'd watch or make, left on what you wouldn't. The feed learns as you go.</Body>}
+      </View> : <Card style={{ gap: tokens.space.xs }}><SectionHeader title="Your taste" detail="BUILDING" /><Body>Swipe right on what you'd watch or make, left on what you wouldn't. Your feed learns as you go.</Body></Card>}
       {taste && (taste.signals < taste.unlockAt
         ? <Muted>🔒 Swipe {taste.unlockAt - taste.signals} more to unlock paid UGC jobs picked for your taste</Muted>
         : taste.ugcMatches > 0
@@ -73,7 +77,7 @@ export default function ForYouScreen() {
           <EduVerify userId={userId} onVerified={() => setAskVerify(false)} />
         </Card>}
         {me?.verifiedStudent && top.kind === 'ugc' && <VerifiedStudentBadge school={me.school} />}
-        <Muted>{feed.length - 1} more in your feed</Muted>
+        <Muted>{feed.length - 1} more in your feed · swipes shape what comes next</Muted>
       </>}
       {!!error && <Body>{error}</Body>}
     </>}

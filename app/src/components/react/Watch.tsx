@@ -4,16 +4,26 @@ import { FunctionReturnType } from 'convex/server';
 import { useFocusEffect } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, BackHandler } from 'react-native';
+import { AppState, BackHandler, ScrollView, StyleSheet, View } from 'react-native';
 import { LaughDetector, LaughDetectorHandle, LaughScore } from '@/laugh/LaughDetector';
 import { WhyRecorder } from './WhyRecorder';
-import { Body, Button, Muted, Screen, Title } from '@/ui';
+import { Badge, Body, Button, Card, Muted, PrimaryCTA, Screen, Title, VideoFrame, tokens } from '@/ui';
 import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
 
 type Props = { gigId: Id<'gigs'>; userId: Id<'users'>; onBack: () => void };
 type Result = FunctionReturnType<typeof api.reactions.submit>;
 type Point = { t: number; s: number | null };
+
+const mediaLayout = StyleSheet.create({
+  page: { gap: tokens.space.lg, paddingBottom: tokens.space.xxl },
+  video: { width: '100%', aspectRatio: 16 / 9 },
+  watchRow: { flexDirection: 'row', alignItems: 'center', gap: tokens.space.md },
+  selfie: { width: 72, height: 72, borderRadius: 36, overflow: 'hidden', borderWidth: 2, borderColor: tokens.accent },
+  detector: { width: 72, height: 72 },
+  result: { gap: tokens.space.sm, paddingVertical: tokens.space.xl },
+  countdown: { fontSize: 112, lineHeight: 120, textAlign: 'center', fontVariant: ['tabular-nums'] },
+});
 
 export function Watch(props: Props) {
   const gig = useQuery(api.gigs.get, { gigId: props.gigId });
@@ -110,42 +120,57 @@ function Playback({ gigId, userId, onBack, title, question, videoUrl }: Props & 
     curve.current.push({ t, s: score.noFace || !Number.isFinite(score.s) ? null : Math.min(1, Math.max(0, score.s)) });
     if (curve.current.length >= 8000) finishRef.current(false);
   }
-  return <Screen>
-    <Title>{title}</Title>
-    {question && <Body>{question}</Body>}
+  return <Screen><ScrollView contentContainerStyle={mediaLayout.page}>
+    <View style={{ gap: tokens.space.xs }}>
+      <Muted>PAID REACTION · CAMERA ON</Muted>
+      <Title>{title}</Title>
+      {question && <Body>{question}</Body>}
+    </View>
     {phase !== 'finished' && <>
-      <VideoView player={player} nativeControls={false} fullscreenOptions={{ enable: false }} allowsPictureInPicture={false}
-        contentFit="contain" style={{ width: '100%', aspectRatio: 16 / 9 }} />
-      <LaughDetector ref={detector} onScore={onScore} style={{ width: 96, height: 128 }} onStatus={(text) => {
+      <VideoFrame><VideoView player={player} nativeControls={false} fullscreenOptions={{ enable: false }} allowsPictureInPicture={false}
+        contentFit="contain" style={mediaLayout.video} /></VideoFrame>
+      <View style={mediaLayout.watchRow}>
+        <View style={mediaLayout.selfie}><LaughDetector ref={detector} onScore={onScore} style={mediaLayout.detector} onStatus={(text) => {
         setCameraStatus(text);
         if (text === 'model ready') setDetectorReady(true);
         if (text === 'camera on' && phaseRef.current === 'idle') detector.current?.stop();
         if (text.startsWith('camera error') && recording.current) finishRef.current(false);
-      }} />
-      <Muted>{cameraStatus}</Muted>
+        }} /></View>
+        <View style={{ flex: 1, gap: tokens.space.xs }}>
+          <Badge tone={phase === 'watching' ? 'good' : 'muted'}>{phase === 'watching' ? '● VERIFIED WATCHING' : 'CAMERA CHECK'}</Badge>
+          <Muted>{cameraStatus}</Muted>
+        </View>
+      </View>
       {phase === 'idle' && <>
-        <Body>Keep your face in frame for the whole clip. Your camera runs only during the clip.</Body>
-        <Button label="Start reaction" disabled={!detectorReady || status !== 'readyToPlay'} onPress={() => {
+        <Card style={{ gap: tokens.space.sm }}>
+          <Body>Keep your face in frame while the clip plays.</Body>
+          <Muted>Your camera runs only during this reaction. Laugh or stay deadpan; both count.</Muted>
+        </Card>
+        <PrimaryCTA label="Start reaction" disabled={!detectorReady || status !== 'readyToPlay'} onPress={() => {
           phaseRef.current = 'countdown'; setCount(3); setPhase('countdown');
           // Warm the camera up during the 3-2-1 so the first second of the clip has face data.
           detector.current?.start();
         }} />
         {status === 'error' && <Body>Video could not load. Return to the feed and try again.</Body>}
       </>}
-      {phase === 'countdown' && <Title>{count || 'Go'}</Title>}
-      {phase === 'watching' && <Body>Watching… keep your face in frame.</Body>}
-      <Button label="Back to feed" onPress={() => { if (phaseRef.current === 'idle') onBack(); else finish(false); }} />
+      {phase === 'countdown' && <Card style={{ gap: tokens.space.xs }}><Muted style={{ textAlign: 'center' }}>GET READY</Muted><Title style={mediaLayout.countdown}>{count || 'GO'}</Title><Muted style={{ textAlign: 'center' }}>Your reaction is being verified</Muted></Card>}
+      {phase === 'watching' && <Body>Watching · keep your face in frame.</Body>}
+      <Button variant="secondary" label="Leave reaction" onPress={() => { if (phaseRef.current === 'idle') onBack(); else finish(false); }} />
     </>}
     {phase === 'finished' && (result ? <>
-      <Title>{result.valid ? `Paid $${(result.earnedCents / 100).toFixed(2)} ✅` : 'Not paid: keep your face in frame'}</Title>
-      <Body>{result.laughed ? 'You laughed' : 'You stayed deadpan'}</Body>
+      <Card style={mediaLayout.result}>
+        <Badge tone={result.valid ? 'good' : 'bad'}>{result.valid ? 'REACTION VERIFIED' : 'NOT VERIFIED'}</Badge>
+        {result.valid ? <><Muted>YOU EARNED</Muted><Title style={{ color: tokens.accent, fontSize: 52, letterSpacing: -2 }}>+${(result.earnedCents / 100).toFixed(2)} ✓</Title></> : <Title>Not paid</Title>}
+        <Body>{result.valid ? 'Your watch was verified.' : 'Keep your face in frame next time.'}</Body>
+      </Card>
+      <Title>{result.laughed ? 'You laughed' : 'You stayed deadpan'}</Title>
       <Body>Both count. We pay for attention, not applause.</Body>
       {result.valid && <WhyRecorder gigId={gigId} reactorId={userId} />}
-      <Button label="Back to feed" onPress={onBack} />
+      <PrimaryCTA label="Back to feed" onPress={onBack} />
     </> : <>
       <Body>{error || 'Saving your reaction…'}</Body>
       {error && <Button label="Retry saving reaction" onPress={() => { void save(); }} />}
       <Button label="Back to feed" onPress={onBack} />
     </>)}
-  </Screen>;
+  </ScrollView></Screen>;
 }

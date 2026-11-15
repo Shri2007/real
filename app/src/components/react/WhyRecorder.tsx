@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from 'convex/react';
 import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder } from 'expo-audio';
 import { useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { Animated, View } from 'react-native';
 import { Badge, Body, Button, Card, Muted, tokens } from '@/ui';
 import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
@@ -23,11 +23,22 @@ export function WhyRecorder({ gigId, reactorId }: { gigId: Id<'gigs'>; reactorId
   const startedAt = useRef(0);
   const stopping = useRef<Promise<void> | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => () => {
     if (timer.current) clearTimeout(timer.current);
     if (recorder.isRecording) void recorder.stop().catch(() => {});
   }, [recorder]);
+
+  useEffect(() => {
+    if (phase !== 'recording') { pulse.stopAnimation(); pulse.setValue(1); return; }
+    const animation = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1.07, duration: 460, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 1, duration: 460, useNativeDriver: true }),
+    ]));
+    animation.start();
+    return () => animation.stop();
+  }, [phase, pulse]);
 
   async function start() {
     if (phase === 'uploading' || stopping.current) return;
@@ -95,15 +106,17 @@ export function WhyRecorder({ gigId, reactorId }: { gigId: Id<'gigs'>; reactorId
     <Button label="Record again" variant="secondary" onPress={() => setPhase('idle')} />
   </Card>;
 
-  return <Card style={{ gap: tokens.space.sm }}>
-    <Body>Why did you react that way?</Body>
-    <Muted>Hold the button and talk for 3–15 seconds. Creators and brands see your words next to the curve. Your mic is on only while you hold.</Muted>
-    <Button
-      label={phase === 'recording' ? 'Listening… release to send' : phase === 'uploading' ? 'Sending…' : '🎙 Hold to say why'}
-      disabled={phase === 'uploading'}
-      onPressIn={() => { void start(); }}
-      onPressOut={() => { void stop(); }}
-    />
+  return <Card style={{ gap: tokens.space.md }}>
+    <Body>What made you react?</Body>
+    <Muted>Hold to share a quick voice note. Your mic is on only while you hold.</Muted>
+    <Animated.View style={{ transform: [{ scale: pulse }] }}>
+      <Button
+        label={phase === 'recording' ? 'Listening · release to send' : phase === 'uploading' ? 'Sending your note…' : 'Hold to say why'}
+        disabled={phase === 'uploading'}
+        onPressIn={() => { void start(); }}
+        onPressOut={() => { void stop(); }}
+      />
+    </Animated.View>
     {!!error && <Body>{error}</Body>}
     <Button label="Skip" variant="secondary" disabled={phase !== 'idle'} onPress={() => setPhase('skipped')} />
   </Card>;
