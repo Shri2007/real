@@ -16,6 +16,8 @@ export default defineSchema({
     email: v.optional(v.string()),
     school: v.optional(v.string()), // derived from domain, e.g. berkeley.edu → Berkeley
     verifiedStudent: v.optional(v.boolean()), // set only after the emailed code is confirmed (verify.ts)
+    whopUserId: v.optional(v.string()), // linked Whop account for cash-outs (payments.linkWhop)
+    whopUsername: v.optional(v.string()),
   })
     .index("by_handle", ["handle"])
     .index("by_email", ["email"]),
@@ -118,6 +120,9 @@ export default defineSchema({
   payouts: defineTable({
     userId: v.id("users"),
     amountCents: v.number(),
-    status: v.union(v.literal("pending"), v.literal("paid")),
+    // pending = no Whop account linked (paid manually); processing/paid/failed = Whop balance transfer state
+    status: v.union(v.literal("pending"), v.literal("processing"), v.literal("paid"), v.literal("failed")),
+    whopTransferId: v.optional(v.string()),
+    failureReason: v.optional(v.string()),
   }).index("by_userId", ["userId"]),
 });

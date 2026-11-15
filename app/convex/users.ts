@@ -37,7 +37,17 @@ export const get = query({
   handler: async (ctx, args) => ctx.db.get(args.userId),
 });
 
-// Student wallet: balance + recent reactions and approved UGC payouts (+ optional .edu badge fields).
+type WalletItem = {
+  id: string;
+  kind: "reaction" | "ugc" | "payout";
+  payoutStatus?: "pending" | "processing" | "paid" | "failed";
+  gigTitle: string;
+  earnedCents: number;
+  valid: boolean;
+  at: number;
+};
+
+// Student wallet: balance + history of reactions, approved UGC payouts and cash-outs (+ .edu badge, linked Whop).
 export const wallet = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
@@ -47,12 +57,12 @@ export const wallet = query({
       .withIndex("by_reactorId", (q) => q.eq("reactorId", args.userId))
       .order("desc")
       .take(30);
-    const items = await Promise.all(
-      rs.map(async (r) => {
+    const items: WalletItem[] = await Promise.all(
+      rs.map(async (r): Promise<WalletItem> => {
         const gig = await ctx.db.get(r.gigId);
         return {
-          id: r._id as string,
-          kind: "reaction" as "reaction" | "ugc",
+          id: r._id,
+          kind: "reaction",
           gigTitle: gig?.title ?? "?",
           earnedCents: r.earnedCents,
           valid: r.valid,
@@ -78,11 +88,28 @@ export const wallet = query({
         at: c.approvedAt ?? c._creationTime,
       });
     }
+    const payouts = await ctx.db
+      .query("payouts")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .take(30);
+    for (const p of payouts) {
+      items.push({
+        id: p._id,
+        kind: "payout",
+        payoutStatus: p.status,
+        gigTitle: "Cash out",
+        earnedCents: -p.amountCents,
+        valid: p.status !== "failed",
+        at: p._creationTime,
+      });
+    }
     items.sort((a, b) => b.at - a.at);
     return {
       balanceCents: user?.balanceCents ?? 0,
       items,
       verifiedStudent: user?.verifiedStudent ?? false,
+      whopUsername: user?.whopUsername ?? null,
       school: user?.school,
     };
   },

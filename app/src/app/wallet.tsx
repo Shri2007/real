@@ -1,10 +1,20 @@
 import { useAction, useQuery } from 'convex/react';
+import { ConvexError } from 'convex/values';
 import { useState } from 'react';
-import { Alert, ScrollView, View } from 'react-native';
+import { Alert, ScrollView, TextInput, View } from 'react-native';
 
 import { api } from '../../convex/_generated/api';
 import { useSession } from '@/lib/session';
 import { Badge, Body, Button, Card, EmptyState, Money, Muted, Screen, Stat, Title, VerifiedStudentBadge, tokens } from '@/ui';
+
+const PAYOUT = {
+  paid: { label: 'Paid to your Whop', tone: 'good' },
+  processing: { label: 'Sending to your Whop…', tone: 'live' },
+  pending: { label: 'Pending: link Whop to get it instantly', tone: 'muted' },
+  failed: { label: 'Failed: returned to your balance', tone: 'bad' },
+} as const;
+
+const errorText = (e: unknown, fallback: string) => (e instanceof ConvexError && typeof e.data === 'string' ? e.data : fallback);
 
 const DAY = 24 * 60 * 60 * 1000;
 const dayKey = (ms: number) => {
@@ -46,15 +56,16 @@ function tasteSummary(liked: { tag: string; w: number }[], disliked: { tag: stri
   return `You've been skipping ${skip}.`;
 }
 
-// Cash out via Whop once Lane D ships api.payments.cashout. Compiles either way.
-const cashoutRef = (api as any).payments?.cashout;
 
 export default function WalletScreen() {
   const { userId } = useSession();
   const wallet = useQuery(api.users.wallet, userId ? { userId } : 'skip');
   const taste = useQuery(api.prefs.taste, userId ? { userId } : 'skip');
-  const cashout = cashoutRef ? useAction(cashoutRef) : null; // stable per build, so hook order never changes
+  const cashout = useAction(api.payments.cashout);
+  const linkWhop = useAction(api.payments.linkWhop);
   const [busy, setBusy] = useState(false);
+  const [whopName, setWhopName] = useState('');
+  const [linking, setLinking] = useState(false);
 
   if (!wallet) {
     return (
@@ -108,17 +119,32 @@ export default function WalletScreen() {
           <Muted>Balance</Muted>
           <Money cents={wallet.balanceCents} size="lg" />
           <Badge tone="good">✓ {valid.length} verified reactions</Badge>
+          {wallet.whopUsername ? <Muted>Cash-outs go to Whop @{wallet.whopUsername}</Muted> : <>
+            <Muted>Link your Whop account to get cash-outs instantly. Without it, cash-outs wait as pending.</Muted>
+            <TextInput accessibilityLabel="Whop username" placeholder="Whop username" placeholderTextColor={tokens.muted} value={whopName} onChangeText={setWhopName}
+              autoCapitalize="none" autoCorrect={false}
+              style={{ color: tokens.text, borderColor: tokens.cardBorder, borderWidth: 1, borderRadius: tokens.radiusSm, padding: tokens.space.md, fontSize: tokens.type.body }} />
+            <Button label={linking ? 'Linking…' : 'Link Whop account'} variant="secondary" disabled={linking || !whopName.trim() || !userId} onPress={async () => {
+              if (!userId) return;
+              setLinking(true);
+              try { await linkWhop({ userId, username: whopName }); setWhopName(''); }
+              catch (e) { Alert.alert('Could not link Whop', errorText(e, 'Try again in a minute.')); }
+              finally { setLinking(false); }
+            }} />
+          </>}
           <Button
-            label={cashout ? (busy ? 'Cashing out…' : 'Cash out via Whop') : 'Cash out via Whop (coming soon)'}
-            disabled={!cashout || busy || wallet.balanceCents <= 0}
+            label={busy ? 'Cashing out…' : 'Cash out via Whop'}
+            disabled={busy || wallet.balanceCents <= 0 || !userId}
             onPress={async () => {
-              if (!cashout || !userId) return;
+              if (!userId) return;
               setBusy(true);
               try {
-                await cashout({ userId });
-                Alert.alert('Cash out requested', 'Your payout is on its way via Whop.');
-              } catch (e: any) {
-                Alert.alert('Cash out failed', e?.message ?? 'Try again in a minute.');
+                const { status } = await cashout({ userId });
+                if (status === 'failed') Alert.alert('Cash out failed', 'Whop could not send it. The money is back on your balance.');
+                else if (status === 'pending') Alert.alert('Cash out requested', 'Recorded as pending. Link your Whop account to get paid instantly next time.');
+                else Alert.alert('Cash out sent', 'Your money is on its way to your Whop balance.');
+              } catch (e) {
+                Alert.alert('Cash out failed', errorText(e, 'Try again in a minute.'));
               } finally {
                 setBusy(false);
               }
@@ -144,7 +170,9 @@ export default function WalletScreen() {
           wallet.items.map((i) => (
             <Card key={i.id} style={{ gap: 4 }}>
               <Body>{i.gigTitle}</Body>
-              {i.kind === 'ugc' ? (
+              {i.kind === 'payout' && i.payoutStatus ? (
+                <Badge tone={PAYOUT[i.payoutStatus].tone}>{`−${(-i.earnedCents / 100).toFixed(2)} · ${PAYOUT[i.payoutStatus].label}`}</Badge>
+              ) : i.kind === 'ugc' ? (
                 <Badge tone="live">{`+$${(i.earnedCents / 100).toFixed(2)} · UGC approved`}</Badge>
               ) : i.valid ? (
                 <Badge tone="good">+${(i.earnedCents / 100).toFixed(2)}</Badge>
