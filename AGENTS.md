@@ -1,9 +1,9 @@
-# AGENTS.md: rules for every coding agent on OPEN MIC
+# AGENTS.md: rules for every coding agent on REAL
 
-Read this before touching anything. It applies to Claude Code, Codex, Cursor, Capy, and any human.
+Read this before touching anything. It applies to Claude Code, Codex, Cursor, Antigravity, Capy, and any human.
 
 ## What this is
-OPEN MIC is a consumer iOS/Android app (Expo) for the YC Consumer Mobile Hackathon (Nov 15, 2026). A laugh only counts if the user's face actually laughed. Friends send memes, hold-to-view checks for a real laugh with the front camera, the sender gets the real reaction, an AI host runs a nightly live show, and a **laughter contagion map** shows how laughter spread through a room. Product details and scope live in `README.md`.
+**REAL** is a consumer iOS/Android app (Expo) for the YC Consumer Mobile Hackathon (Nov 15, 2026): **a marketplace for verified human reactions.** Creators post a short clip and pay per reaction. Reactors watch it with the front camera on and get paid **the same whether they laugh or not** ("we pay for attention, not applause"). On-device face detection proves a real human watched and records a laugh curve over the clip timeline. Creators get a live reaction curve + an AI report. **The current tasks and API contract live in `docs/TASKS.md` and override anything below about the old OPEN MIC idea.**
 
 ## Hackathon rules (hard constraints)
 1. **All code is written after 10:00 AM on Nov 15.** Never paste in code that predates that.

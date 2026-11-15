@@ -1,58 +1,83 @@
-# TASKS: who builds what (parallel lanes)
+# TASKS: REAL (pivoted at 10:45 from OPEN MIC)
 
-**Ground rules for every agent:** read `AGENTS.md` first. Work only in the files listed for your lane. Use the Convex functions below through `api.*` (`import { api } from '../../convex/_generated/api'`; the path depends on the file's depth). Don't edit `convex/` unless you're Lane D. Test on a real phone in Expo Go before merging. Branch `lane-x/<thing>`, open a PR (Revyl checks it), merge fast.
+> **REAL: a marketplace for verified human reactions.** Creators post a clip and pay per reaction. Reactors watch it with the front camera on, get paid the same whether they laugh or not ("we pay for attention, not applause"), and on-device face detection proves a real human watched. Creators get a **live reaction curve**: "2 of 3 laughed at 0:04, attention dropped at 0:09."
 
+**Ground rules for every agent:** read `AGENTS.md`. Work only in your lane's files. Use the Convex API below through `api.*` (`import { api } from '../../convex/_generated/api'`; the path depends on file depth). Only Lane D edits `convex/`. **UI rule:** functionality only, using `@/ui` primitives (`Screen, Card, Button, Title, Body, Muted, tokens`). No custom styling in feature files; Lane A owns the design. Test on a real phone in Expo Go. Branch `lane-x/<thing>` → PR (Revyl checks it) → merge fast.
 
-## 🎨 UI rule (read before building any screen)
-The current UI is a placeholder. **Do NOT copy its styling or layout.** Build features **functionality-first** using only the shared primitives in `src/ui/` (`Screen`, `Card`, `Button`, `Title`, `Body`, `Muted`). If a primitive is missing, add a plain one there. No hard-coded colors, fonts, or shadows in feature files. **Lane A (Cursor) owns `src/ui/` and the design**, and a later design pass restyles everything at once by changing `src/ui/` only.
+## Already done
+- Expo app + Convex (REAL schema deployed). `useSession()` from `@/lib/session` gives `{ userId }`. Name-only onboarding.
+- **Laugh detector, proven on iPhone** (`src/laugh/`): `<LaughDetector ref onScore onStatus />`, `ref.start()` / `ref.stop()`, per-frame `{ s, smile, eye, jaw, t, noFace? }`. Laugh = `s >= 0.45`.
+- Tabs: **React** (`src/app/index.tsx`), **Create** (`src/app/create.tsx`), **Wallet** (`src/app/wallet.tsx`).
+- `expo-video` and `expo-image-picker` installed. Revyl PR checks on. Supermemory + Keiki keys in Convex.
 
-## Already done (10:00–10:25)
-- Expo app + Convex deployed. `ConvexProvider` + `SessionProvider` in `src/app/_layout.tsx`.
-- **Onboarding** (`src/components/onboarding.tsx`): name + color → create a group or join with a code. Session (userId, groupId) is saved on the device. `useSession()` from `@/lib/session` gives `{ userId, groupId }`. `todayKey()` gives `YYYY-MM-DD`.
-- **Laugh detector** (`src/laugh/`): `<LaughDetector ref onScore onStatus />` with `ref.start()` / `ref.stop()`. Score per frame `{ s, smile, eye, jaw, t }`. Real laugh = peak `s >= 0.45`. **Proven on a real iPhone.**
-- Tabs: **Drop** (`src/app/index.tsx`), **Show** (`src/app/show.tsx`), **You** (`src/app/graph.tsx`).
-- Revyl PR checks are on. Supermemory + Keiki keys are in Convex env.
-
-## Convex API contract (Lane D owns `convex/`)
+## Convex API contract
 | Function | Args → returns |
 |---|---|
-| `api.users.create` (mutation) | `{name, color}` → userId |
-| `api.groups.create` / `api.groups.join` | `{name, userId}` → `{groupId, code}` / `{code, userId}` → groupId |
-| `api.groups.mine` / `api.groups.members` | `{userId}` → groups / `{groupId}` → users |
-| `api.drops.generateUploadUrl` (mutation) | `{}` → upload URL (POST the image, get `storageId`) |
-| `api.drops.send` (mutation) | `{groupId, userId, day, kind:'text'|'image', text?, storageId?}` → dropId |
-| `api.drops.today` (query) | `{groupId, day}` → drops with `imageUrl, senderName, senderColor, views, realLaughs` |
-| `api.laughs.record` (mutation) | `{dropId, viewerId, peak, onsetAt?, reactionStorageId?}` → `{isReal}` |
-| `api.laughs.forDrop` (query) | `{dropId}` → `[{viewerName, isReal, peak, reactionUrl}]` |
-| `api.laughs.graph` (query) | `{userId}` → `[{senderId, name, viewed, real, pct}]` sorted by pct |
-| `api.shows.now` (mutation) | `{}` → server ms (clock sync) |
-| `api.shows.start` / `tellJoke` / `end` | `{groupId}` → showId / `{showId, jokeText}` / `{showId}` |
-| `api.shows.current` (query) | `{groupId}` → latest show |
-| `api.shows.laugh` (mutation) | `{showId, userId, onsetAt}` (server-corrected ms) |
-| `api.shows.contagion` (query) | `{showId}` → `{jokeStartedAt, starter, people:[{name, onsetAt, msAfterStarter}]}` |
+| `api.users.create` | `{name, color}` → userId |
+| `api.users.wallet` (query) | `{userId}` → `{balanceCents, items:[{gigTitle, earnedCents, valid, at}]}` |
+| `api.gigs.generateUploadUrl` | `{}` → upload URL (POST the video file → `{storageId}`) |
+| `api.gigs.create` | `{creatorId, title, question?, videoStorageId, durationMs?, priceCents, slots}` → gigId (status `draft`) |
+| `api.gigs.publish` | `{gigId, paid?, whopCheckoutId?}` → makes it `live` (free test = call directly; paid = after Whop) |
+| `api.gigs.feed` (query) | `{userId}` → live gigs I can react to (`creatorName, slotsLeft, priceCents, title, question`) |
+| `api.gigs.get` (query) | `{gigId}` → gig + `videoUrl` |
+| `api.gigs.mine` (query) | `{creatorId}` → my gigs |
+| `api.reactions.submit` | `{gigId, reactorId, curve:[{t, s|null}], watchedToEnd}` → `{valid, earnedCents, laughed}` (valid = watched to end + face ≥70%) |
+| `api.reactions.results` (query, live) | `{gigId}` → `{count, laughedCount, curve:[{sec, avg, laughingPct}], peakSec, reactors:[{name, color, laughed, peak}]}` |
 
 ---
 
-## Lane B: Daily Drop feed (**Codex**), files: `src/app/index.tsx`, `src/components/drop/*`
-Prompt to paste into Codex:
-> Read AGENTS.md and docs/TASKS.md. You own `src/app/index.tsx` and `src/components/drop/`. Replace the laugh-test screen with the **Daily Drop feed** for the current group (`useSession()`): (1) a header with the group name and join code (`api.groups.mine`), (2) a "Drop something funny" composer: text, or an image via `expo-image-picker` uploaded with `api.drops.generateUploadUrl` and then `api.drops.send` with `day: todayKey()`, (3) a list of today's drops (`api.drops.today`). Each drop card is **blurred until you hold it**. While held, run the existing `<LaughDetector>` from `@/laugh/LaughDetector` (`start` on press-in, `stop` on press-out), track the peak score, then call `api.laughs.record({dropId, viewerId: userId, peak})` and show 😂 REAL LAUGH or 😐 DEADPAN. (4) On *my own* drops, show "N of M actually laughed" from `api.laughs.forDrop`. Use one shared LaughDetector instance for the screen (small selfie preview top-right). Dark UI (#0e0e12 background, #ffb020 accent). Keep it working in Expo Go. Run `npx tsc --noEmit` and test on the phone.
+## Lane B: Reactor flow (**Codex**), files: `src/app/index.tsx`, `src/components/react/*`
+```
+Read AGENTS.md and docs/TASKS.md (UI rule!). You own ONLY src/app/index.tsx and src/components/react/. Replace the current test screen with the REACTOR flow:
+1. Gig feed: api.gigs.feed({userId}) (userId from useSession() in @/lib/session). Each card: title, creator, question, "$X.XX · N spots left". Tap → watch screen (a modal or conditional view inside your files).
+2. Watch screen: load api.gigs.get({gigId}). Play videoUrl with expo-video (useVideoPlayer + VideoView), full width, no seeking. A small LaughDetector (from @/laugh/LaughDetector) shows the reactor's face. 3-2-1 countdown, then start the detector + playback together.
+3. Record a curve: on every onScore push { t: player.currentTime*1000, s: noFace ? null : s } (throttle to ~10/sec).
+4. When playback ends: detector.stop(), api.reactions.submit({gigId, reactorId: userId, curve, watchedToEnd: true}). If the user leaves early, submit with watchedToEnd:false.
+5. Result: "Paid $X.XX" (or "Not paid: keep your face in frame") + "You laughed / You stayed deadpan, both count. We pay for attention, not applause." → back to feed.
+Must work in Expo Go. `npx tsc --noEmit` in app/, test on the phone, branch lane-b/reactor, open a PR.
+```
 
-## Lane C: Live show + contagion map (**Antigravity**), files: `src/app/show.tsx`, `src/components/show/*`, `src/lib/clock.ts`
-Prompt to paste into Antigravity:
-> Read AGENTS.md and docs/TASKS.md. You own `src/app/show.tsx`, `src/components/show/`, `src/lib/clock.ts`. Build the **live show + laughter contagion map**. (1) `src/lib/clock.ts`: a hook `useServerClock()` that calls `api.shows.now` 5 times on mount (and every 60s), computes offset = serverNow − (sent + received)/2, keeps the median, and exposes `serverNow()`. (2) The Show screen for the current group (`useSession()`): if there's no show, a "Start show" button (`api.shows.start`) and a "Tell joke" text box (`api.shows.tellJoke`). When `api.shows.current` has status `joke`, show the joke big on every phone and run `<LaughDetector>`. The **first frame where score ≥ 0.45** → call `api.shows.laugh({showId, userId, onsetAt: serverNow()})` once. (3) The **contagion map** from `api.shows.contagion`: one dot per person, lighting up in order of `msAfterStarter` with an expanding ring from the starter (Reanimated), plus "🥇 Laugh starter: NAME" and "X% of the room laughed in Y.Ys" (laughers ÷ group members via `api.groups.members`). Make the map look great on Expo **web** too (`npm run web` on the laptop = the big-screen view on stage). Dark UI, #ffb020 accent. Test with 2+ phones.
+## Lane C: Creator flow + live reaction curve (**Antigravity**), files: `src/app/create.tsx`, `src/components/create/*`
+```
+Read AGENTS.md and docs/TASKS.md (UI rule!). You own ONLY src/app/create.tsx and src/components/create/. Build the CREATOR flow:
+1. "New test": pick a video with expo-image-picker (videos only, max ~30s), title, optional question ("Is the ending funny?"), slots (default 5), price per reaction (default 50 cents). Upload: api.gigs.generateUploadUrl → POST the file → storageId → api.gigs.create({creatorId: userId, ...}) → api.gigs.publish({gigId}) (free test for now; Lane D adds Whop pay-first).
+2. "My tests": api.gigs.mine({creatorId: userId}) with filled/slots.
+3. Results screen (THE DEMO SCREEN): api.reactions.results({gigId}) live. Show "X of N actually laughed," reactor avatars (name color + a laughed badge), and the REACTION CURVE: a chart over the clip timeline (x = seconds, y = avg score, plus laughingPct) with a "Peak laugh at 0:0X" marker. Use react-native-svg if installed (npx expo install react-native-svg), else per-second bars from Views. Animate new points as reactions arrive (Convex is live). Optional: the clip above the chart with a synced playhead.
+4. Must look good on Expo WEB too (npm run web = the big screen on stage).
+Must work in Expo Go. `npx tsc --noEmit`, test with 2 phones (one creates, one reacts), branch lane-c/creator, open a PR.
+```
 
-## Lane A: polish + integration (**Cursor**, Shri driving)
-> Read AGENTS.md and docs/TASKS.md. You own `src/components/onboarding.tsx`, `src/components/app-tabs.tsx`, `src/constants/`, app icon/splash, and integration bugs between lanes. Tasks: (1) onboarding polish (show the group code after creating, a "share code" button via the `Share` API), (2) a reaction photo: when a laugh is real, capture one frame (add a `snapshot` message to `src/laugh/detectorHtml.ts` that returns a JPEG data URL of the video frame) and upload it as `reactionStorageId`, (3) consistent theme + nice tab icons, (4) merge PRs from the other lanes and keep `main` working on the phone.
+## Lane A: Design system + polish (**Cursor**, Shri driving), files: `src/ui/*`, `src/components/onboarding.tsx`, `src/components/app-tabs.tsx`, app.json icon/splash
+```
+Read AGENTS.md and docs/TASKS.md. You own src/ui/ (design system), onboarding, tabs, icon/splash. Every screen uses ONLY @/ui primitives, so restyling src/ui/ restyles the whole app.
+1. Design direction for REAL: trustworthy + human + a bit playful. "Verified" badges, live-signal energy, faces, a money-green accent for earnings. Implement tokens + Screen, Card, Button (primary/secondary), Title, Body, Muted, plus Badge ("Verified real"), Avatar(name, color), Money(cents), Stat (big number + label).
+2. Restyle onboarding with @/ui only. Tab icons via expo-symbols: React "face.smiling", Create "video.badge.plus", Wallet "dollarsign.circle".
+3. App name "REAL" in app.json, simple icon/splash.
+Must work in Expo Go. `npx tsc --noEmit`, branch lane-a/design-real, open a PR.
+```
 
-## Lane D: backend + AI (**Vishnu, Claude Code**), files: `convex/**`
-> Read AGENTS.md and docs/TASKS.md. You own `convex/`. Keep the API contract stable (add, don't rename). Tasks in order: (1) **Daily Drop scheduler**: `crons.ts` hourly → for each group without today's `dropPrompts`, pick a random time 10:00–21:00, insert it; expose `api.drops.prompt({groupId, day})`. (2) **Group streak**: when every member has dropped today, `streak+1` (once per day). (3) **Supermemory** (`SUPERMEMORY_API_KEY`, v5 namespace API, one namespace per user `user_<id>`): in an action after each real laugh, add a memory ("NAME really laughed at SENDER's drop: TEXT"); `api.humor.profile({userId})` returns their humor summary. (4) **AI host** (`OPENAI_API_KEY`, Responses API, `gpt-6-luna`): action `api.host.pickJokes({groupId})` ranks today's drops by real laughs + Supermemory and writes a 1-line host intro for each, for the live show. (5) Whop / Keiki only if their prizes are confirmed.
+## Lane D: Backend, money, AI (**Vishnu, Claude Code**), files: `convex/**`
+```
+Read AGENTS.md and docs/TASKS.md. You own convex/. Keep the API contract stable (add, don't rename).
+1. WHOP (core, track prize): creator pays before a gig goes live. Action api.payments.checkout({gigId}) creates a Whop sandbox checkout for slots*priceCents (+ platform fee), returns the URL; the app opens it with expo-web-browser. A Convex HTTP action /whop/webhook verifies WHOP_WEBHOOK_SECRET and calls gigs.publish({gigId, paid:true, whopCheckoutId}). Reactor cash-out: api.payments.cashout({userId}) (sandbox payout, or record a pending payout and zero the balance). Keys: npx convex env set WHOP_API_KEY / WHOP_WEBHOOK_SECRET.
+2. AI REPORT (OPENAI_API_KEY, Responses API, gpt-6-luna): action api.report.forGig({gigId}) turns reactions.results into 3 bullets ("Laughs spike at 0:04, cut 0:00–0:02, the ending loses people"). Store it on the gig (optional field) so the creator screen shows it.
+3. SUPERMEMORY (SUPERMEMORY_API_KEY, v5, namespace user_<id>): after each valid reaction add a memory ("NAME laughed at a 20s skit about roommates"); later rank gigs.feed by reactor taste → "matched to reactors who like this humor."
+4. Seed: an internal mutation that seeds 2 demo users + 1 demo gig for the stage.
+```
 
-## Capy tasks (create at capy.ai on this repo, isolated files)
-1. **Humor graph screen** (`src/app/graph.tsx` only): "Who actually makes you laugh," using `api.laughs.graph({userId})` from `useSession()`. Rows: name, a bar (green ≥60%, amber ≥30%, red below), `pct%`, "real/viewed". Header "Your week in real laughs." Empty state: "Hold some drops to build your graph." Dark UI, #ffb020 accent.
-2. *(later)* **Humor Twin card** on the graph screen once Lane D adds `api.humor.twin`.
+## Capy (sponsor proof): create at capy.ai on this repo
+1. **Wallet screen** (`src/app/wallet.tsx` only): `api.users.wallet({userId})` from `useSession()`. A big balance ($ from cents), a list of reactions (gig title, +$X.XX or "not paid"), a "Cash out" button (disabled, "coming soon," until Lane D adds `api.payments.cashout`). Only `@/ui` primitives.
 
 ## Checkpoints
-- **12:30:** Drop → hold → verdict → the sender sees "N actually laughed," on 2 phones.
-- **15:00:** live show + contagion map with 3+ phones.
-- **16:30:** AI host + Supermemory in, Revyl green.
+- **12:30:** a creator posts a clip on phone A → a reactor watches on phone B → paid → results on A.
+- **15:00:** live reaction curve + AI report + Whop checkout.
+- **16:30:** design pass merged, Revyl green, demo data seeded.
 - **17:00:** FREEZE.
+
+## Demo (3 min)
+1. "Bots inflate every metric and AI fakes every testimonial. Creators post blind."
+2. A creator uploads a clip and pays via **Whop**.
+3. 3 judges react on phones (faces live).
+4. Creator screen: the curve fills in live, "2 of 3 laughed at 0:04," reactors paid.
+5. AI report: "cut the first 2 seconds."
+6. "We pay for attention, not applause. REAL: know what lands before you post."

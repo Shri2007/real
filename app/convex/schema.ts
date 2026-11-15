@@ -1,73 +1,46 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
-// OPEN MIC data model. Contract for all lanes: see docs/TASKS.md.
+// REAL: a marketplace for verified human reactions.
+// Creators post a clip ("gig") and pay per reaction. Reactors watch it with the
+// front camera on; on-device face detection proves a real human watched and
+// records a laugh/smile curve over the clip's timeline.
 export default defineSchema({
   users: defineTable({
     name: v.string(),
     color: v.string(),
+    balanceCents: v.number(), // reactor earnings (demo wallet; Whop handles real payouts)
   }),
 
-  groups: defineTable({
-    name: v.string(),
-    code: v.string(), // 6-char join code
-    streak: v.number(),
-    lastStreakDay: v.optional(v.string()), // YYYY-MM-DD
-  }).index("by_code", ["code"]),
-
-  members: defineTable({
-    groupId: v.id("groups"),
-    userId: v.id("users"),
+  gigs: defineTable({
+    creatorId: v.id("users"),
+    title: v.string(),
+    question: v.optional(v.string()), // e.g. "Is the ending funny?"
+    videoStorageId: v.id("_storage"),
+    durationMs: v.optional(v.number()),
+    priceCents: v.number(), // paid to each reactor
+    slots: v.number(), // how many reactions the creator bought
+    filled: v.number(),
+    status: v.union(v.literal("draft"), v.literal("live"), v.literal("done")),
+    paid: v.boolean(), // Whop checkout completed
+    whopCheckoutId: v.optional(v.string()),
   })
-    .index("by_groupId", ["groupId"])
-    .index("by_userId", ["userId"])
-    .index("by_groupId_and_userId", ["groupId", "userId"]),
+    .index("by_status", ["status"])
+    .index("by_creatorId", ["creatorId"]),
 
-  // The daily Drop prompt for a group (Vishnu: random-time scheduler fills this).
-  dropPrompts: defineTable({
-    groupId: v.id("groups"),
-    day: v.string(), // YYYY-MM-DD
-    firesAt: v.number(), // ms epoch
-    closesAt: v.number(),
-  }).index("by_groupId_and_day", ["groupId", "day"]),
-
-  drops: defineTable({
-    groupId: v.id("groups"),
-    userId: v.id("users"),
-    day: v.string(),
-    kind: v.union(v.literal("text"), v.literal("image")),
-    text: v.optional(v.string()),
-    storageId: v.optional(v.id("_storage")),
-  })
-    .index("by_groupId_and_day", ["groupId", "day"])
-    .index("by_userId", ["userId"]),
-
-  laughs: defineTable({
-    dropId: v.id("drops"),
-    groupId: v.id("groups"),
-    viewerId: v.id("users"),
-    senderId: v.id("users"),
+  reactions: defineTable({
+    gigId: v.id("gigs"),
+    reactorId: v.id("users"),
+    // Sampled reaction curve: t = ms into the clip, s = laugh score 0..1 (null = no face)
+    curve: v.array(v.object({ t: v.number(), s: v.union(v.number(), v.null()) })),
     peak: v.number(),
-    isReal: v.boolean(),
-    onsetAt: v.optional(v.number()), // server-corrected ms
-    reactionStorageId: v.optional(v.id("_storage")),
+    laughed: v.boolean(), // peak >= threshold
+    facePresentPct: v.number(), // 0..100
+    watchedToEnd: v.boolean(),
+    valid: v.boolean(), // face present enough + watched to end → paid
+    earnedCents: v.number(),
   })
-    .index("by_dropId", ["dropId"])
-    .index("by_dropId_and_viewerId", ["dropId", "viewerId"])
-    .index("by_viewerId", ["viewerId"])
-    .index("by_senderId", ["senderId"]),
-
-  // Live show (the 9 PM show / on-stage finale) + contagion map.
-  shows: defineTable({
-    groupId: v.id("groups"),
-    status: v.union(v.literal("lobby"), v.literal("joke"), v.literal("done")),
-    jokeText: v.optional(v.string()),
-    jokeStartedAt: v.optional(v.number()),
-  }).index("by_groupId", ["groupId"]),
-
-  showLaughs: defineTable({
-    showId: v.id("shows"),
-    userId: v.id("users"),
-    onsetAt: v.number(), // server-corrected ms
-  }).index("by_showId", ["showId"]),
+    .index("by_gigId", ["gigId"])
+    .index("by_reactorId", ["reactorId"])
+    .index("by_gigId_and_reactorId", ["gigId", "reactorId"]),
 });
