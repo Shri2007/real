@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as catalog from "../catalog.js";
+import type * as creator from "../creator.js";
 import type * as email from "../email.js";
 import type * as gigs from "../gigs.js";
 import type * as http from "../http.js";
@@ -31,6 +33,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  catalog: typeof catalog;
+  creator: typeof creator;
   email: typeof email;
   gigs: typeof gigs;
   http: typeof http;

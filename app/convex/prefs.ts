@@ -112,6 +112,13 @@ export const setInterests = mutation({
   },
 });
 
+const LINGER_RATIO = 1.6;
+// Median dwell over this student's recent card swipes (2.5s until there are a few).
+const typicalDwell = (swipes: Doc<"swipes">[]) => {
+  const d = swipes.map((s) => s.dwellMs).filter((x): x is number => !!x).slice(-25).sort((a, b) => a - b);
+  return d.length >= 3 ? d[Math.floor(d.length / 2)] : 2500;
+};
+
 export const swipe = mutation({
   args: {
     userId: v.id("users"),
@@ -119,8 +126,9 @@ export const swipe = mutation({
     oppId: v.optional(v.id("ugcOpps")),
     itemKey: v.optional(v.string()),
     dir: v.union(v.literal("right"), v.literal("left")),
+    dwellMs: v.optional(v.number()),
   },
-  returns: v.null(),
+  returns: v.object({ lingered: v.boolean() }),
   handler: async (ctx, args) => {
     const item = args.gigId ? await ctx.db.get(args.gigId) : args.oppId ? await ctx.db.get(args.oppId) : CATALOG.find((c) => c.key === args.itemKey);
     if (!item) throw new Error("Nothing to swipe");
@@ -128,10 +136,13 @@ export const swipe = mutation({
       .query("swipes")
       .withIndex("by_userId_and_item", (q) => q.eq("userId", args.userId).eq("gigId", args.gigId).eq("oppId", args.oppId))
       .take(1000);
-    if (prev.some((s) => s.itemKey === args.itemKey)) return null;
-    await ctx.db.insert("swipes", { userId: args.userId, gigId: args.gigId, oppId: args.oppId, itemKey: args.itemKey, dir: args.dir });
-    await bumpTaste(ctx, args.userId, item.tags, args.dir === "right" ? 1 : -1);
-    return null;
+    if (prev.some((s) => s.itemKey === args.itemKey)) return { lingered: false };
+    // Dwell time vs. this student's own pace: lingering then liking counts double; lingering then passing is curiosity, not a no.
+    const dwellMs = args.dwellMs && args.dwellMs > 0 ? Math.min(args.dwellMs, 60_000) : undefined;
+    const lingered = !!dwellMs && dwellMs >= LINGER_RATIO * typicalDwell(prev);
+    await ctx.db.insert("swipes", { userId: args.userId, gigId: args.gigId, oppId: args.oppId, itemKey: args.itemKey, dir: args.dir, dwellMs });
+    await bumpTaste(ctx, args.userId, item.tags, args.dir === "right" ? (lingered ? 2 : 1) : lingered ? 0 : -1);
+    return { lingered };
   },
 });
 
@@ -177,7 +188,11 @@ async function studentState(ctx: QueryCtx, userId: Id<"users">) {
   const opps = unlocked ? await ctx.db.query("ugcOpps").withIndex("by_status", (q) => q.eq("status", "open")).order("desc").take(100) : [];
   const matchedOpps = opps
     .filter((o) => o.brandId !== userId && !seenOpps.has(o._id) && o.claimed < o.spots)
-    .map((o) => ({ opp: o, ...scoreTags(weights, o.tags) }))
+    .map((o) => {
+      const fit = (user?.creatorStyle?.bestFor ?? []).some((t) => o.tags?.includes(t));
+      const scored = scoreTags(weights, o.tags);
+      return { opp: o, ...scored, s: scored.s + (fit ? 3 : 0), fitsStyle: fit };
+    })
     .filter((m) => m.s > 0)
     .sort((x, y) => y.s - x.s);
   return { user, weights, seenGigs, signals, unlocked, matchedOpps };
@@ -211,7 +226,8 @@ export const deck = query({
       });
     }
     const jobs: Card[] = [];
-    for (const { opp: o, liked } of matchedOpps.slice(0, 12)) {
+    const style = (await ctx.db.get(userId))?.creatorStyle?.style;
+    for (const { opp: o, liked, fitsStyle } of matchedOpps.slice(0, 12)) {
       const brand = await ctx.db.get(o.brandId);
       const gig = o.gigId ? await ctx.db.get(o.gigId) : null;
       const [prefix, rest] = gig?.title.includes(":") ? gig.title.split(/:\s*/, 2) : [null, gig?.title ?? null];
@@ -220,7 +236,7 @@ export const deck = query({
       jobs.push({
         kind: "ugc", id: o._id, oppId: o._id, title: brandName, subtitle: rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : o.brief,
         image: (brand?.handle && BRAND_IMAGES[brand.handle]) || tagged.image, tags: o.tags ?? [],
-        reason: liked.length ? `Picked for you · you like ${liked.slice(0, 2).join(" + ")}` : "Picked for you",
+        reason: fitsStyle && style ? `Fits your style · ${style}` : liked.length ? `Picked for you · you like ${liked.slice(0, 2).join(" + ")}` : "Picked for you",
         ugc: { brand: brandName, brief: o.brief, cents: o.payoutCents, spotsLeft: o.spots - o.claimed },
       });
     }
@@ -251,6 +267,64 @@ export const taste = query({
       signals,
       unlockAt: UGC_UNLOCK_SIGNALS,
       ugcMatches: matchedOpps.length,
+    };
+  },
+});
+
+// The kind of UGC each interest turns into, with starter prompts for the creator test (creator.ts).
+export const LANES: Record<string, { lane: string; prompts: string[] }> = {
+  fashion: { lane: "Try-ons and fit checks", prompts: ["Show one piece styled three ways in 15 seconds.", "Fit check: walk us through today's outfit and why it works."] },
+  food: { lane: "First-bite reviews", prompts: ["Give an honest first-bite review of the last thing you ate.", "Sell us your go-to late-night snack in 15 seconds."] },
+  "energy drinks": { lane: "Routine and pre-game clips", prompts: ["Show the moment you need a boost and what you reach for.", "Your 5am-to-first-class routine in 15 seconds."] },
+  gym: { lane: "Workout and routine clips", prompts: ["Your favorite move and why it works, in 15 seconds.", "Hype us up for leg day."] },
+  skincare: { lane: "Get-ready-with-me and before/afters", prompts: ["GRWM: one product you'd never skip and why.", "Honest review of a product that disappointed you."] },
+  tech: { lane: "Desk tours and app demos", prompts: ["Show the one app or gadget you'd recommend to every student.", "Desk tour in 15 seconds."] },
+  study: { lane: "Study-with-me and productivity tips", prompts: ["Your best finals-week trick in 15 seconds.", "Study-with-me: set up your space and say why."] },
+  music: { lane: "Music discovery and reactions", prompts: ["Play 5 seconds of a song and convince us to listen.", "Your headphones, your current song, your take."] },
+  pets: { lane: "Pet content", prompts: ["Introduce your pet like they're the main character.", "Film your pet's reaction to something new."] },
+  comedy: { lane: "Skits and storytimes", prompts: ["Tell a 15-second storytime with a punchline.", "Act out a college moment everyone's lived through."] },
+  gaming: { lane: "Gameplay reactions", prompts: ["React to your best (or worst) moment in a game.", "Pitch your favorite game in 15 seconds."] },
+  travel: { lane: "Vlogs and day-in-the-life", prompts: ["Show the best part of your day in 15 seconds.", "Your dream trip, pitched like an ad."] },
+};
+
+const laneTag = v.object({ tag: v.string(), lane: v.string(), why: v.string(), prompts: v.array(v.string()), jobs: v.number() });
+
+// "Your UGC lane": the interests a student lingers on longest (dwell vs. their own pace) plus taste weight,
+// mapped to the UGC format they'd make best, with how many open jobs fit.
+export const lane = query({
+  args: { userId: v.id("users") },
+  returns: v.object({
+    ready: v.boolean(),
+    lanes: v.array(laneTag),
+    style: v.union(v.object({ style: v.string(), bestFor: v.array(v.string()), feedback: v.string(), score: v.number() }), v.null()),
+  }),
+  handler: async (ctx, { userId }) => {
+    const { user, weights, matchedOpps } = await studentState(ctx, userId);
+    const swiped = await ctx.db.query("swipes").withIndex("by_userId_and_item", (q) => q.eq("userId", userId)).take(1000);
+    const typical = typicalDwell(swiped);
+    const dwell = new Map<string, { total: number; n: number }>();
+    for (const s of swiped) {
+      const tags = s.itemKey ? CATALOG.find((c) => c.key === s.itemKey)?.tags : undefined;
+      if (!tags || !s.dwellMs) continue;
+      for (const t of tags) dwell.set(t, { total: (dwell.get(t)?.total ?? 0) + s.dwellMs / typical, n: (dwell.get(t)?.n ?? 0) + 1 });
+    }
+    const ranked = Object.keys(LANES)
+      .map((tag) => {
+        const d = dwell.get(tag);
+        const ratio = d ? d.total / d.n : 0;
+        return { tag, ratio, score: (weights.get(tag) ?? 0) + (d ? 2 * (ratio - 1) * Math.min(d.n, 3) : 0) };
+      })
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 2);
+    return {
+      ready: swiped.length >= 3,
+      lanes: ranked.map(({ tag, ratio }) => ({
+        tag, lane: LANES[tag].lane, prompts: LANES[tag].prompts,
+        why: ratio >= 1.2 ? `You linger ${ratio.toFixed(1)}× longer on ${tag}` : `You keep liking ${tag}`,
+        jobs: matchedOpps.filter((m) => m.opp.tags?.includes(tag)).length,
+      })),
+      style: user?.creatorStyle ?? null,
     };
   },
 });

@@ -12,6 +12,8 @@ export default defineSchema({
     handle: v.optional(v.string()), // Keiki conversation/sender identity
     balanceCents: v.number(), // reactor earnings (demo wallet; Whop handles real payouts)
     taste: v.optional(v.array(v.object({ tag: v.string(), w: v.number() }))), // preference engine weights
+    // Latest creator-test result (creator.ts): the UGC style this student is best at, used to rank UGC jobs.
+    creatorStyle: v.optional(v.object({ style: v.string(), bestFor: v.array(v.string()), feedback: v.string(), score: v.number() })),
     // Optional .edu verification (Lane E) — all additive / optional
     email: v.optional(v.string()),
     school: v.optional(v.string()), // derived from domain, e.g. berkeley.edu → Berkeley
@@ -80,8 +82,22 @@ export default defineSchema({
     gigId: v.optional(v.id("gigs")),
     oppId: v.optional(v.id("ugcOpps")),
     itemKey: v.optional(v.string()), // a For you catalog card (catalog.ts)
+    dwellMs: v.optional(v.number()), // how long the card was on screen before the swipe
     dir: v.union(v.literal("right"), v.literal("left")),
   }).index("by_userId_and_item", ["userId", "gigId", "oppId"]),
+
+  // Creator test: a 15s take on a starter prompt, transcribed and scored by AI to find the student's UGC style.
+  creatorTakes: defineTable({
+    userId: v.id("users"),
+    prompt: v.string(),
+    tag: v.string(),
+    videoStorageId: v.id("_storage"),
+    status: v.union(v.literal("scoring"), v.literal("scored"), v.literal("failed")),
+    transcript: v.optional(v.string()),
+    scores: v.optional(v.object({ hook: v.number(), clarity: v.number(), energy: v.number(), authenticity: v.number() })),
+    style: v.optional(v.string()),
+    feedback: v.optional(v.string()),
+  }).index("by_userId", ["userId"]),
 
   // Paid UGC briefs brands post; students pick them from their feed.
   ugcOpps: defineTable({
