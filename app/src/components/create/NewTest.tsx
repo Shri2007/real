@@ -85,7 +85,7 @@ export function NewTest({ userId, onDone, onCancel }: { userId: Id<'users'>; onD
   };
   return <Card style={{ gap: tokens.space.lg }}>
     <View style={{ gap: tokens.space.xs }}>
-      <Badge tone="good">NEW REACTION TEST</Badge>
+      <Badge tone="good">New reaction test</Badge>
       <SectionHeader title="One video. One question." />
       <Muted>Find the moment your audience responds to.</Muted>
     </View>
@@ -109,7 +109,7 @@ export function NewTest({ userId, onDone, onCancel }: { userId: Id<'users'>; onD
     {draft && <Muted>Draft saved. Retry publishes this same test without uploading or creating another. You can also return to My tests and open this draft.</Muted>}
     {!!error && <Body>{error}</Body>}
     {positiveInteger(slots) && positiveInteger(price) && <Card style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: tokens.space.md, backgroundColor: tokens.cardRaised }}>
-      <View style={{ flex: 1, gap: 2 }}><Muted>YOUR TEST BUDGET · 20% FEE INCLUDED</Muted><Body>{slots} reactions × ${(Number(price) / 100).toFixed(2)}</Body></View>
+      <View style={{ flex: 1, gap: 2 }}><Muted>Your test budget · 20% fee included</Muted><Body>{slots} reactions × ${(Number(price) / 100).toFixed(2)}</Body></View>
       <Money cents={Number(slots) * Number(price) * 1.2} />
     </Card>}
     <PrimaryCTA label={busy ? step || 'Choosing video…' : `Pay with Whop · ${positiveInteger(slots) && positiveInteger(price) ? `$${(Number(slots) * Number(price) * 1.2 / 100).toFixed(2)}` : ''}`} onPress={() => submit('pay')} disabled={busy || (!draft && (!validDuration(duration) || !title.trim() || !positiveInteger(slots) || !positiveInteger(price)))} />

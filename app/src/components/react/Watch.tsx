@@ -122,7 +122,7 @@ function Playback({ gigId, userId, onBack, title, question, videoUrl }: Props & 
   }
   return <Screen style={mediaLayout.page}>
     <View style={{ gap: tokens.space.xs }}>
-      <Muted>PAID REACTION · CAMERA ON</Muted>
+      <Muted>Paid reaction · camera on</Muted>
       <Title>{title}</Title>
       {question && <Body>{question}</Body>}
     </View>
@@ -153,14 +153,14 @@ function Playback({ gigId, userId, onBack, title, question, videoUrl }: Props & 
         }} />
         {status === 'error' && <Body>Video could not load. Return to the feed and try again.</Body>}
       </>}
-      {phase === 'countdown' && <Card style={{ gap: tokens.space.xs }}><Muted style={{ textAlign: 'center' }}>GET READY</Muted><Title style={mediaLayout.countdown}>{count || 'GO'}</Title><Muted style={{ textAlign: 'center' }}>Your reaction is being verified</Muted></Card>}
+      {phase === 'countdown' && <Card style={{ gap: tokens.space.xs }}><Muted style={{ textAlign: 'center' }}>Get ready</Muted><Title style={mediaLayout.countdown}>{count || 'GO'}</Title><Muted style={{ textAlign: 'center' }}>Your reaction is being verified</Muted></Card>}
       {phase === 'watching' && <Body>Watching · keep your face in frame.</Body>}
       <Button variant="secondary" label="Leave reaction" onPress={() => { if (phaseRef.current === 'idle') onBack(); else finish(false); }} />
     </>}
     {phase === 'finished' && (result ? <>
       <Card style={mediaLayout.result}>
         <Badge tone={result.valid ? 'good' : 'bad'}>{result.valid ? 'REACTION VERIFIED' : 'NOT VERIFIED'}</Badge>
-        {result.valid ? <><Muted>YOU EARNED</Muted><Title style={{ color: tokens.accent, fontSize: 52, letterSpacing: -2 }}>+${(result.earnedCents / 100).toFixed(2)} ✓</Title></> : <Title>Not paid</Title>}
+        {result.valid ? <><Muted>You earned</Muted><Title style={{ color: tokens.accent, fontSize: 52, letterSpacing: -1.2 }}>+${(result.earnedCents / 100).toFixed(2)} ✓</Title></> : <Title>Not paid</Title>}
         <Body>{result.valid ? 'Your watch was verified.' : 'Keep your face in frame next time.'}</Body>
       </Card>
       <Title>{result.laughed ? 'You laughed' : 'You stayed deadpan'}</Title>

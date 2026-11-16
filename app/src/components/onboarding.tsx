@@ -59,8 +59,8 @@ export function Onboarding() {
 
   if (!role) return <Screen style={{ justifyContent: 'center', gap: tokens.space.xl }}>
     <View style={{ gap: tokens.space.sm }}>
-      <Badge tone="good">REAL · VERIFIED REACTIONS</Badge>
-      <Title style={{ fontSize: 48, letterSpacing: -2 }}>REAL</Title>
+      <Badge tone="good">Verified Gen Z reactions</Badge>
+      <Title style={{ fontSize: 44, letterSpacing: -1.2 }}>REAL</Title>
       <Body>Get paid for honest reactions. Know what lands before you post.</Body>
     </View>
     <View style={{ gap: tokens.space.md }}>
@@ -85,8 +85,7 @@ export function Onboarding() {
   return (
     <Screen style={{ justifyContent: 'center', gap: tokens.space.lg }}>
       <View style={{ gap: tokens.space.sm }}>
-        <Muted>REAL · {role === 'brand' ? 'BUSINESS ACCOUNT' : 'STUDENT ACCOUNT'}</Muted>
-        <Title style={{ fontSize: 36 }}>{role === 'brand' ? 'Set up your brand' : 'Set up your profile'}</Title>
+        <Title style={{ fontSize: 34 }}>{role === 'brand' ? 'Set up your brand' : 'Set up your profile'}</Title>
         <Body>{role === 'brand' ? 'Your brand name is what students see on your jobs.' : 'Pick a name and color. Next, verify your school email.'}</Body>
       </View>
 

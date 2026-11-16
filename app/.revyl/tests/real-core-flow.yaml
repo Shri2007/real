@@ -39,7 +39,7 @@ test:
         - type: instructions
           step_description: 'Tap the "comedy", "food" and "tech" chips, then tap Continue.'
         - type: validation
-          step_description: The app shows a tab bar with For you, React, Create and Wallet, and the For you feed shows a clip or UGC card.
+          step_description: The app shows a tab bar with For you, React, Create and Wallet, and For you shows a swipe card with a photo and Pass / Like buttons.
         - type: instructions
           step_description: Tap the React tab.
         - type: validation

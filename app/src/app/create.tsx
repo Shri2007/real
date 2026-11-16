@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { useQuery } from 'convex/react';
 import { useSession } from '@/lib/session';
-import { Badge, Body, Button, Card, EmptyState, Muted, Screen, SectionHeader, Title, tokens } from '@/ui';
+import { Badge, Body, Button, Card, EmptyState, Muted, Screen, SectionHeader, Title, tokens, LargeTitle } from '@/ui';
 import { NewTest } from '@/components/create/NewTest';
 import { Comparison, Results } from '@/components/create/Results';
 import { api } from '../../convex/_generated/api';
@@ -16,18 +16,14 @@ export default function CreateScreen() {
   const [a, setA] = useState<Id<'gigs'> | null>(null);
   const [b, setB] = useState<Id<'gigs'> | null>(null);
   return <Screen style={{ gap: tokens.space.xl }}>
-    <View style={{ gap: tokens.space.xs }}>
-      <Muted>CREATOR STUDIO</Muted>
-      <Title style={{ fontSize: 36 }}>Create</Title>
-      <Body>Find out what lands before you post.</Body>
-    </View>
+    <LargeTitle subtitle="Find out what lands before you post.">Create</LargeTitle>
     {!userId ? <Muted>Choose your name to create tests.</Muted> : mode === 'new' ? <NewTest userId={userId} onCancel={() => setMode('mine')} onDone={(id) => { setSelected(id); setMode('results'); }} /> : <>
       {mode !== 'mine' && <Button label="Back to My tests" variant="secondary" onPress={() => setMode('mine')} />}
       {mode === 'results' && selected ? <Results key={selected} gigId={selected} /> : mode === 'compare' && a && b ? <Comparison a={a} b={b} /> : <>
         <Button label="＋  New reaction test" onPress={() => setMode('new')} />
         <SectionHeader title="My tests" detail={gigs ? `${gigs.length} TOTAL` : 'LOADING'} />
         <Card style={{ gap: tokens.space.xs }}>
-          <Badge tone="muted">COMPARE TWO CUTS</Badge>
+          <Badge tone="muted">Compare two cuts</Badge>
           <Muted>A · {gigs?.find((g) => g._id === a)?.title ?? 'Choose a test'}</Muted>
           <Muted>B · {gigs?.find((g) => g._id === b)?.title ?? 'Choose a test'}</Muted>
           <Button label="Compare A and B" disabled={!a || !b || a === b} onPress={() => setMode('compare')} />

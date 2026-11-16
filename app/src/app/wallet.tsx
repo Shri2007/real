@@ -6,7 +6,7 @@ import { Alert, TextInput, View } from 'react-native';
 
 import { api } from '../../convex/_generated/api';
 import { useSession } from '@/lib/session';
-import { Badge, Body, Button, Card, EmptyState, Money, Muted, Screen, SectionHeader, Stat, Title, VerifiedStudentBadge, tokens } from '@/ui';
+import { Badge, Body, Button, Card, EmptyState, Money, Muted, Screen, SectionHeader, Stat, Title, VerifiedStudentBadge, tokens, LargeTitle } from '@/ui';
 
 const PAYOUT = {
   paid: { label: 'Paid to your Whop', tone: 'good' },
@@ -83,7 +83,7 @@ export default function WalletScreen() {
 
   return (
     <Screen style={{ gap: tokens.space.xl }}>
-        <View style={{ gap: tokens.space.xs }}><Muted>YOUR EARNINGS</Muted><Title style={{ fontSize: 36 }}>Wallet</Title></View>
+        <LargeTitle subtitle="Your earnings">Wallet</LargeTitle>
         {wallet.verifiedStudent ? <VerifiedStudentBadge school={wallet.school} /> : null}
 
         <Card style={{ gap: tokens.space.md, paddingVertical: tokens.space.xl }}>

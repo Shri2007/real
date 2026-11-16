@@ -79,6 +79,7 @@ export default defineSchema({
     userId: v.id("users"),
     gigId: v.optional(v.id("gigs")),
     oppId: v.optional(v.id("ugcOpps")),
+    itemKey: v.optional(v.string()), // a For you catalog card (catalog.ts)
     dir: v.union(v.literal("right"), v.literal("left")),
   }).index("by_userId_and_item", ["userId", "gigId", "oppId"]),
 
