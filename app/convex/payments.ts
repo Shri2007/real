@@ -33,7 +33,7 @@ async function whopCheckout(title: string, cents: number, metadata: Record<strin
       account_id: accountId,
       mode: "payment",
       metadata,
-      variant: { account_id: accountId, title: title.slice(0, 80), billing_type: "one_time", currency: "usd", initial_price: cents / 100 },
+      variant: { account_id: accountId, title: title.length > 30 ? `${title.slice(0, 27).trimEnd()}...` : title, billing_type: "one_time", currency: "usd", initial_price: cents / 100 },
     }),
   });
   if (!res.ok) throw new Error(`Whop checkout failed: ${res.status} ${await res.text()}`);
@@ -51,7 +51,7 @@ export const createCheckout = internalAction({
     if (!gig) throw new Error("Gig not found");
     if (gig.paid) throw new Error("This test is already paid");
     const cents = totalCents(gig);
-    const { id, url } = await whopCheckout(`REAL test: ${gig.title}`, cents, { gigId });
+    const { id, url } = await whopCheckout(`REAL: ${gig.title}`, cents, { gigId });
     await ctx.runMutation(internal.payments.recordCheckout, { gigId, whopCheckoutId: id });
     return { url, totalCents: cents };
   },
@@ -94,7 +94,7 @@ export const createUgcCheckout = internalAction({
     if (!opp) throw new Error("Opportunity not found");
     if (opp.funded) throw new Error("This opportunity is already funded");
     const cents = totalCents({ slots: opp.spots, priceCents: opp.payoutCents });
-    const { id, url } = await whopCheckout(`REAL UGC credits: ${opp.title}`, cents, { oppId });
+    const { id, url } = await whopCheckout(`REAL UGC: ${opp.title}`, cents, { oppId });
     await ctx.runMutation(internal.payments.recordCheckout, { oppId, whopCheckoutId: id });
     return { url, totalCents: cents };
   },
