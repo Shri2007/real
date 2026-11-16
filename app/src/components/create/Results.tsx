@@ -56,13 +56,23 @@ function ResultsContent({ gigId, label }: { gigId: Id<'gigs'>; label?: string })
       <Muted>Video unavailable. Results are still shown below.</Muted>
       <ReactionCurve series={series} durationSec={(gig.durationMs ?? 0) / 1000} peakSec={results.peakSec} dropOffs={drops} />
     </>}
-    <Muted>Red markers show laughter drops: the average falls by at least 0.15 after a second at or above 0.45. They do not show attention loss. Timing is whole-second; missing bins are not zero.</Muted>
+    <Muted>Feedback quality: {Math.round(results.avgQuality * 100)}%</Muted>
+    <Muted>{results.filteredCount} low-quality reactions filtered out (including flagged and low-trust reviews).</Muted>
+    <Card style={{ gap: tokens.space.sm, borderColor: tokens.good, borderWidth: 1 }}>
+      <SectionHeader title="What worked" />
+      {results.topWorked.length ? results.topWorked.map((item, index) => <Body key={`${item.text}-${index}`}>{item.text} ×{item.count}</Body>) : <Muted>No specific positive feedback yet.</Muted>}
+    </Card>
+    <Card style={{ gap: tokens.space.sm, borderColor: tokens.bad, borderWidth: 1 }}>
+      <SectionHeader title="What sucked" />
+      {results.topSucked.length ? results.topSucked.map((item, index) => <Body key={`${item.text}-${index}`}>{item.text} ×{item.count}</Body>) : <Muted>No specific criticism yet.</Muted>}
+    </Card>
+    <Muted>Red markers show laughter drops. Green highlights mark sustained laugh runs (score ≥0.45 for at least 1.5 seconds).</Muted>
     {results.reactors.map((reactor) => <View key={reactor.reactionId} style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space.sm, flexWrap: 'wrap' }}>
       <Avatar name={reactor.name} color={reactor.color} /><Body>{reactor.name}</Body>
       {reactor.verifiedStudent ? <VerifiedStudentBadge school={reactor.school} /> : null}
       <Badge tone={reactor.laughed ? 'good' : 'muted'}>{reactor.laughed ? 'Laughed' : 'Stayed deadpan'}</Badge>
     </View>)}
-    <WhatPeopleSaid gigId={gigId} />
+    <WhatPeopleSaid gigId={gigId} brandId={gig.creatorId} />
     <Segments gigId={gigId} />
     {results.count > 0 && <AiReport gigId={gigId} report={gig.report} />}
     <UgcPanel gigId={gigId} brandId={gig.creatorId} gigTitle={gig.title} />
@@ -91,8 +101,11 @@ function AiReport({ gigId, report }: { gigId: Id<'gigs'>; report?: string[] }) {
   </Card>;
 }
 
-function WhatPeopleSaid({ gigId }: { gigId: Id<'gigs'> }) {
+function WhatPeopleSaid({ gigId, brandId }: { gigId: Id<'gigs'>; brandId: Id<'users'> }) {
   const quotes = useQuery(api.voice.forGig, { gigId });
+  const reject = useMutation(api.reactions.brandReject);
+  const [busyId, setBusyId] = useState<Id<'reactions'> | null>(null);
+  const [error, setError] = useState('');
   if (!quotes?.length) return null;
   const counts = new Map<string, number>();
   for (const q of quotes) for (const t of q.tags) counts.set(t, (counts.get(t) ?? 0) + 1);
@@ -109,7 +122,19 @@ function WhatPeopleSaid({ gigId }: { gigId: Id<'gigs'> }) {
         {q.sentiment && <Badge tone={q.sentiment === 'pos' ? 'good' : q.sentiment === 'neg' ? 'bad' : 'muted'}>{q.sentiment === 'pos' ? 'Liked it' : q.sentiment === 'neg' ? 'Not for them' : 'Mixed'}</Badge>}
       </View>
       <Body>“{q.whyQuote}”</Body>
+      {q.flags.includes('brand_reject') ? <Badge tone="bad">FLAGGED · NOT HELPFUL</Badge> : <Button
+        label={busyId === q.reactionId ? 'Saving…' : 'Not helpful'}
+        variant="secondary"
+        disabled={busyId !== null}
+        onPress={async () => {
+          setBusyId(q.reactionId); setError('');
+          try { await reject({ reactionId: q.reactionId, brandId }); }
+          catch (e) { setError(e instanceof Error ? e.message : 'Could not flag this reaction.'); }
+          finally { setBusyId(null); }
+        }}
+      />}
     </Card>)}
+    {!!error && <Muted>{error}</Muted>}
   </View>;
 }
 

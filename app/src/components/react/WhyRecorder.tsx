@@ -7,7 +7,7 @@ import { api } from '../../../convex/_generated/api';
 import { Id } from '../../../convex/_generated/dataModel';
 
 const MAX_MS = 15000;
-const MIN_MS = 800;
+const MIN_MS = 4000;
 
 type Phase = 'idle' | 'recording' | 'uploading' | 'sent' | 'skipped';
 
@@ -80,7 +80,7 @@ export function WhyRecorder({ gigId, reactorId }: { gigId: Id<'gigs'>; reactorId
         const response = await fetch(await uploadUrl({}), { method: 'POST', headers: { 'Content-Type': type }, body: audio });
         if (!response.ok) throw new Error('Upload failed. Try again.');
         const { storageId } = await response.json();
-        await submitWhy({ gigId, reactorId, audioStorageId: storageId });
+        await submitWhy({ gigId, reactorId, audioStorageId: storageId, durationMs: elapsed });
         setPhase('sent');
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Could not send. Try again.');
@@ -94,6 +94,12 @@ export function WhyRecorder({ gigId, reactorId }: { gigId: Id<'gigs'>; reactorId
 
   if (phase === 'skipped') return null;
 
+  if (mine?.finalized) return <Card style={{ gap: tokens.space.sm }}>
+    <Badge>✓ Review scored</Badge>
+    {mine.whyQuote ? <Body>“{mine.whyQuote}”</Body> : <Muted>Your review was processed.</Muted>}
+    <Muted>This is what the creator sees, with your name and color.</Muted>
+  </Card>;
+
   if (phase === 'sent') return <Card style={{ gap: tokens.space.sm }}>
     <Badge>✓ Your why was sent</Badge>
     {mine?.whyQuote ? <>
@@ -102,13 +108,14 @@ export function WhyRecorder({ gigId, reactorId }: { gigId: Id<'gigs'>; reactorId
         {mine.tags.map((t) => <Badge key={t} tone="muted">{t}</Badge>)}
       </View>}
       <Muted>This is what the creator sees, with your name and color.</Muted>
-    </> : <Muted>Transcribing…</Muted>}
-    <Button label="Record again" variant="secondary" onPress={() => setPhase('idle')} />
+      {mine.finalized ? <Muted>Review scored and payment finalized.</Muted> : <Muted>Scoring your review…</Muted>}
+    </> : <Muted>Transcribing and scoring your review…</Muted>}
+    {!mine?.finalized && <Button label="Record again" variant="secondary" onPress={() => setPhase('idle')} />}
   </Card>;
 
   return <Card style={{ gap: tokens.space.md }}>
     <Body>What made you react?</Body>
-    <Muted>Hold to share a quick voice note. Your mic is on only while you hold.</Muted>
+    <Muted>Hold to speak for at least 4 seconds. Your mic is on only while you hold.</Muted>
     <Animated.View style={{ transform: [{ scale: pulse }] }}>
       <Button
         label={phase === 'recording' ? 'Listening · release to send' : phase === 'uploading' ? 'Sending your note…' : 'Hold to say why'}

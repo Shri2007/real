@@ -228,6 +228,12 @@ export const requestPayout = internalMutation({
   },
 });
 
+export const userIdForPayoutIdentity = internalQuery({
+  args: { subject: v.string() },
+  returns: v.union(v.id("users"), v.null()),
+  handler: async (ctx, { subject }) => ctx.db.normalizeId("users", subject),
+});
+
 // Record the transfer outcome. A failed transfer puts the money back on the student's balance.
 export const settlePayout = internalMutation({
   args: {
@@ -271,10 +277,14 @@ export const checkTransfer = internalAction({
 });
 
 export const cashout = action({
-  args: { userId: v.id("users") },
+  args: {},
   returns: v.object({ amountCents: v.number(), status: v.union(v.literal("pending"), v.literal("processing"), v.literal("paid"), v.literal("failed")) }),
-  handler: async (ctx, args): Promise<{ amountCents: number; status: "pending" | "processing" | "paid" | "failed" }> => {
-    const { payoutId, amountCents, whopUserId } = await ctx.runMutation(internal.payments.requestPayout, args);
+  handler: async (ctx): Promise<{ amountCents: number; status: "pending" | "processing" | "paid" | "failed" }> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new ConvexError("Sign in before cashing out");
+    const userId = await ctx.runQuery(internal.payments.userIdForPayoutIdentity, { subject: identity.subject });
+    if (!userId) throw new ConvexError("Payout account not found");
+    const { payoutId, amountCents, whopUserId } = await ctx.runMutation(internal.payments.requestPayout, { userId });
     if (!whopUserId) return { amountCents, status: "pending" };
     let t: TransferResult;
     try {
