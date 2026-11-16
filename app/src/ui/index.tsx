@@ -1,35 +1,58 @@
 // Shared UI primitives. ALL screens use these — restyle here to restyle the app.
-// Design: REAL — clean, Apple-like. White background, near-black SF text, iOS grays, money-green for earnings.
+// Design: REAL — a printed-zine feel. Warm paper, ink-black pills, hairline rules, a highlighter-lime tag for what's
+// verified or picked for you, money in green. Instrument Serif headlines, Geist text, Geist Mono labels and numbers.
 import { ReactNode } from 'react';
 import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export const tokens = {
-  bg: '#FFFFFF',
-  card: '#F5F5F7',
-  cardRaised: '#EDEDF0',
-  cardBorder: '#E5E5EA',
-  text: '#1D1D1F',
-  muted: '#6E6E73',
-  faint: '#C7C7CC',
-  accent: '#1A7F45',
-  accentDim: 'rgba(26, 127, 69, 0.10)',
-  live: '#1A7F45',
-  good: '#1A7F45',
-  bad: '#C0392B',
-  radius: 22,
-  radiusSm: 12,
+  bg: '#F2EFE7',
+  card: '#FAF8F3',
+  cardRaised: '#E8E4D9',
+  cardBorder: 'rgba(23, 22, 19, 0.13)',
+  text: '#171613',
+  muted: '#6A665C',
+  faint: '#BDB7A8',
+  ink: '#171613',
+  hot: '#DDF56B',
+  accent: '#16784A',
+  accentDim: 'rgba(22, 120, 74, 0.10)',
+  live: '#16784A',
+  good: '#16784A',
+  bad: '#B8432F',
+  radius: 18,
+  radiusSm: 10,
   pad: 18,
   padLg: 26,
   space: { xs: 5, sm: 9, md: 13, lg: 18, xl: 26, xxl: 36 },
   type: {
-    title: 28,
-    subtitle: 20,
-    body: 17,
-    muted: 15,
-    stat: 40,
-    badge: 13,
+    title: 32,
+    subtitle: 22,
+    body: 16,
+    muted: 14.5,
+    stat: 46,
+    badge: 11.5,
   },
+  // Loaded in app/_layout.tsx. Serif for headlines and big numbers, Geist for reading, Geist Mono for labels.
+  font: {
+    display: 'InstrumentSerif',
+    displayItalic: 'InstrumentSerif-Italic',
+    body: 'Geist',
+    medium: 'Geist-Medium',
+    semibold: 'Geist-SemiBold',
+    mono: 'GeistMono',
+    monoMedium: 'GeistMono-Medium',
+  },
+};
+
+export const fontAssets = {
+  [tokens.font.display]: require('@expo-google-fonts/instrument-serif/400Regular/InstrumentSerif_400Regular.ttf'),
+  [tokens.font.displayItalic]: require('@expo-google-fonts/instrument-serif/400Regular_Italic/InstrumentSerif_400Regular_Italic.ttf'),
+  [tokens.font.body]: require('@expo-google-fonts/geist/400Regular/Geist_400Regular.ttf'),
+  [tokens.font.medium]: require('@expo-google-fonts/geist/500Medium/Geist_500Medium.ttf'),
+  [tokens.font.semibold]: require('@expo-google-fonts/geist/600SemiBold/Geist_600SemiBold.ttf'),
+  [tokens.font.mono]: require('@expo-google-fonts/geist-mono/400Regular/GeistMono_400Regular.ttf'),
+  [tokens.font.monoMedium]: require('@expo-google-fonts/geist-mono/500Medium/GeistMono_500Medium.ttf'),
 };
 
 /** Every screen scrolls by default; `style` styles the content. Taps outside a field and drags close the keyboard.
@@ -121,7 +144,7 @@ export function Title({ children, style }: { children: ReactNode; style?: TextSt
   return <Text style={[styles.title, style]}>{children}</Text>;
 }
 
-/** iOS-style segmented control. */
+/** Two-or-more way switch: ink pill on the selected option. */
 export function Segmented<T extends string>({ options, value, onChange }: { options: { value: T; label: string }[]; value: T; onChange: (v: T) => void }) {
   return (
     <View style={styles.segmented}>
@@ -146,17 +169,17 @@ export function RoundButton({ glyph, label, onPress, tone = 'muted', size = 64 }
       accessibilityLabel={label}
       style={({ pressed }) => [styles.round, { width: size, height: size, borderRadius: size / 2 }, pressed && styles.buttonPressed]}
     >
-      <Text style={{ fontSize: size * 0.38, color: tone === 'good' ? tokens.accent : tokens.muted, fontWeight: '600' }}>{glyph}</Text>
+      <Text style={{ fontSize: size * 0.36, color: tone === 'good' ? tokens.accent : tokens.ink }}>{glyph}</Text>
     </Pressable>
   );
 }
 
-/** iOS large navigation title (34pt bold), the top of each tab. */
+/** Big serif title at the top of each tab. */
 export function LargeTitle({ children, subtitle }: { children: ReactNode; subtitle?: string }) {
   return (
     <View style={{ gap: 2 }}>
       <Text style={styles.largeTitle}>{children}</Text>
-      {subtitle ? <Text style={styles.muted}>{subtitle}</Text> : null}
+      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     </View>
   );
 }
@@ -330,203 +353,68 @@ export function PrimaryCTA(props: Omit<Parameters<typeof Button>[0], 'variant'>)
   return <Button {...props} variant="primary" />;
 }
 
+const F = tokens.font;
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: tokens.bg,
-  },
-  screenContent: {
-    flexGrow: 1,
-    paddingHorizontal: tokens.pad,
-    paddingTop: tokens.pad,
-    paddingBottom: 120,
-  },
-  choice: { flexDirection: 'row', alignItems: 'center', gap: tokens.space.md, borderWidth: 1.5 },
-  choiceSelected: { borderColor: tokens.text, backgroundColor: tokens.bg },
-  choiceDot: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: tokens.cardBorder },
-  choiceDotSelected: { borderColor: tokens.text, borderWidth: 7 },
-  choiceTitle: { color: tokens.text, fontSize: tokens.type.subtitle, fontWeight: '700', letterSpacing: -0.3 },
-  card: {
-    backgroundColor: tokens.card,
-    borderRadius: tokens.radius,
-    padding: tokens.pad,
-  },
-  button: {
-    borderRadius: 14,
-    paddingVertical: 15,
-    paddingHorizontal: tokens.pad,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonPrimary: {
-    backgroundColor: tokens.accent,
-  },
-  buttonSecondary: {
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: tokens.cardBorder,
-  },
-  buttonDisabled: {
-    opacity: 0.4,
-  },
-  buttonPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
-  },
-  buttonLabel: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: tokens.type.body,
-    letterSpacing: -0.4,
-  },
-  buttonLabelSecondary: {
-    color: tokens.text,
-  },
-  segmented: { flexDirection: 'row', backgroundColor: tokens.cardRaised, borderRadius: 10, padding: 2 },
-  segment: { flex: 1, paddingVertical: 7, borderRadius: 8, alignItems: 'center' },
-  segmentOn: { backgroundColor: tokens.bg, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
-  segmentText: { color: tokens.muted, fontSize: 14, fontWeight: '500', letterSpacing: -0.2 },
-  segmentTextOn: { color: tokens.text, fontWeight: '600' },
-  round: { alignItems: 'center', justifyContent: 'center', backgroundColor: tokens.bg, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
-  largeTitle: {
-    color: tokens.text,
-    fontSize: 34,
-    fontWeight: '700',
-    letterSpacing: -0.8,
-  },
-  title: {
-    color: tokens.text,
-    fontSize: tokens.type.title,
-    fontWeight: '700',
-    letterSpacing: -0.6,
-  },
-  body: {
-    color: tokens.text,
-    fontSize: tokens.type.body,
-    lineHeight: 22,
-    letterSpacing: -0.4,
-  },
-  muted: {
-    color: tokens.muted,
-    fontSize: tokens.type.muted,
-    lineHeight: 20,
-    letterSpacing: -0.2,
-  },
-  badge: {
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  badgeGood: {
-    backgroundColor: tokens.accentDim,
-  },
-  badgeLive: {
-    backgroundColor: tokens.accentDim,
-  },
-  badgeMuted: {
-    backgroundColor: 'rgba(94, 101, 95, 0.10)',
-  },
-  badgeBad: {
-    backgroundColor: 'rgba(180, 65, 47, 0.10)',
-  },
-  badgeText: {
-    fontSize: tokens.type.badge,
-    fontWeight: '600',
-    letterSpacing: -0.1,
-  },
-  badgeTextGood: {
-    color: tokens.good,
-  },
-  badgeTextLive: {
-    color: tokens.live,
-  },
-  badgeTextMuted: {
-    color: tokens.muted,
-  },
-  badgeTextBad: {
-    color: tokens.bad,
-  },
-  avatar: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    color: '#0A0B0A',
-    fontWeight: '800',
-  },
-  money: {
-    color: tokens.accent,
-    fontSize: 20,
-    fontWeight: '700',
-    fontVariant: ['tabular-nums'],
-  },
-  moneyLg: {
-    fontSize: tokens.type.stat,
-    letterSpacing: -1,
-  },
-  stat: {
-    gap: 4,
-  },
-  statValue: {
-    color: tokens.text,
-    fontSize: tokens.type.stat,
-    fontWeight: '700',
-    letterSpacing: -1,
-    fontVariant: ['tabular-nums'],
-  },
-  statLabel: {
-    color: tokens.muted,
-    fontSize: tokens.type.muted,
-    fontWeight: '600',
-  },
-  empty: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: tokens.space.xxl,
-    paddingHorizontal: tokens.pad,
-    gap: tokens.space.sm,
-  },
-  emptyTitle: {
-    color: tokens.text,
-    fontSize: tokens.type.subtitle,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  emptyBody: {
-    color: tokens.muted,
-    fontSize: tokens.type.muted,
-    lineHeight: 18,
-    textAlign: 'center',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    gap: tokens.space.md,
-  },
-  sectionTitle: {
-    color: tokens.text,
-    fontSize: tokens.type.subtitle,
-    fontWeight: '600',
-    letterSpacing: -0.45,
-  },
-  sectionDetail: {
-    color: tokens.muted,
-    fontSize: tokens.type.muted,
-    fontVariant: ['tabular-nums'],
-  },
-  chip: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 11, paddingVertical: 7 },
-  chipGood: { backgroundColor: tokens.accentDim },
-  chipLive: { backgroundColor: tokens.accentDim },
+  screen: { flex: 1, backgroundColor: tokens.bg },
+  screenContent: { flexGrow: 1, paddingHorizontal: tokens.pad, paddingTop: tokens.pad, paddingBottom: 120 },
+  choice: { flexDirection: 'row', alignItems: 'center', gap: tokens.space.md },
+  choiceSelected: { borderColor: tokens.ink, borderWidth: 1.5, backgroundColor: tokens.bg },
+  choiceDot: { width: 20, height: 20, borderRadius: 10, borderWidth: 1.5, borderColor: tokens.faint },
+  choiceDotSelected: { borderColor: tokens.ink, borderWidth: 6 },
+  choiceTitle: { color: tokens.text, fontFamily: F.display, fontSize: 24, lineHeight: 27 },
+  card: { backgroundColor: tokens.card, borderRadius: tokens.radius, padding: tokens.pad, borderWidth: StyleSheet.hairlineWidth, borderColor: tokens.cardBorder },
+  button: { borderRadius: 999, paddingVertical: 15, paddingHorizontal: tokens.padLg, alignItems: 'center', justifyContent: 'center' },
+  buttonPrimary: { backgroundColor: tokens.ink },
+  buttonSecondary: { backgroundColor: 'transparent', borderWidth: 1, borderColor: tokens.ink },
+  buttonDisabled: { opacity: 0.35 },
+  buttonPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
+  buttonLabel: { color: tokens.bg, fontFamily: F.semibold, fontSize: 15.5, letterSpacing: -0.1 },
+  buttonLabelSecondary: { color: tokens.ink },
+  segmented: { flexDirection: 'row', borderRadius: 999, padding: 3, borderWidth: 1, borderColor: tokens.ink },
+  segment: { flex: 1, paddingVertical: 8, borderRadius: 999, alignItems: 'center' },
+  segmentOn: { backgroundColor: tokens.ink },
+  segmentText: { color: tokens.ink, fontFamily: F.medium, fontSize: 14 },
+  segmentTextOn: { color: tokens.bg },
+  round: { alignItems: 'center', justifyContent: 'center', backgroundColor: tokens.card, borderWidth: 1, borderColor: tokens.ink },
+  largeTitle: { color: tokens.text, fontFamily: F.display, fontSize: 52, lineHeight: 54, letterSpacing: -0.8 },
+  subtitle: { color: tokens.muted, fontFamily: F.body, fontSize: 15, lineHeight: 21 },
+  title: { color: tokens.text, fontFamily: F.display, fontSize: tokens.type.title, lineHeight: tokens.type.title * 1.08, letterSpacing: -0.3 },
+  body: { color: tokens.text, fontFamily: F.body, fontSize: tokens.type.body, lineHeight: 23 },
+  muted: { color: tokens.muted, fontFamily: F.body, fontSize: tokens.type.muted, lineHeight: 20 },
+  badge: { alignSelf: 'flex-start', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 },
+  badgeGood: { backgroundColor: tokens.hot },
+  badgeLive: { backgroundColor: tokens.hot },
+  badgeMuted: { backgroundColor: 'transparent', borderWidth: 1, borderColor: tokens.cardBorder },
+  badgeBad: { backgroundColor: 'rgba(184, 67, 47, 0.12)' },
+  badgeText: { fontFamily: F.monoMedium, fontSize: tokens.type.badge, letterSpacing: 0.2 },
+  badgeTextGood: { color: tokens.ink },
+  badgeTextLive: { color: tokens.ink },
+  badgeTextMuted: { color: tokens.muted },
+  badgeTextBad: { color: tokens.bad },
+  avatar: { alignItems: 'center', justifyContent: 'center' },
+  avatarText: { color: tokens.ink, fontFamily: F.display },
+  money: { color: tokens.accent, fontFamily: F.monoMedium, fontSize: 18, fontVariant: ['tabular-nums'] },
+  moneyLg: { fontFamily: F.display, fontSize: 56, lineHeight: 58, letterSpacing: -1 },
+  stat: { gap: 4 },
+  statValue: { color: tokens.text, fontFamily: F.display, fontSize: tokens.type.stat, lineHeight: tokens.type.stat * 1.05, fontVariant: ['tabular-nums'] },
+  statLabel: { color: tokens.muted, fontFamily: F.mono, fontSize: 12 },
+  empty: { alignItems: 'center', justifyContent: 'center', paddingVertical: tokens.space.xxl, paddingHorizontal: tokens.pad, gap: tokens.space.sm },
+  emptyTitle: { color: tokens.text, fontFamily: F.displayItalic, fontSize: 28, textAlign: 'center' },
+  emptyBody: { color: tokens.muted, fontFamily: F.body, fontSize: tokens.type.muted, lineHeight: 20, textAlign: 'center' },
+  sectionHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: tokens.space.md, paddingBottom: 6, borderBottomWidth: 1, borderColor: tokens.ink },
+  sectionTitle: { color: tokens.text, fontFamily: F.displayItalic, fontSize: tokens.type.subtitle + 4 },
+  sectionDetail: { color: tokens.muted, fontFamily: F.mono, fontSize: 12, fontVariant: ['tabular-nums'] },
+  chip: { alignSelf: 'flex-start', borderRadius: 6, paddingHorizontal: 9, paddingVertical: 5 },
+  chipGood: { backgroundColor: tokens.hot },
+  chipLive: { backgroundColor: tokens.hot },
   chipMuted: { backgroundColor: tokens.cardRaised },
-  chipBad: { backgroundColor: 'rgba(180, 65, 47, 0.10)' },
-  chipText: { fontSize: tokens.type.badge, fontWeight: '700', letterSpacing: 0.1 },
-  chipTextGood: { color: tokens.good },
-  chipTextLive: { color: tokens.live },
+  chipBad: { backgroundColor: 'rgba(184, 67, 47, 0.12)' },
+  chipText: { fontFamily: F.monoMedium, fontSize: tokens.type.badge },
+  chipTextGood: { color: tokens.ink },
+  chipTextLive: { color: tokens.ink },
   chipTextMuted: { color: tokens.muted },
   chipTextBad: { color: tokens.bad },
-  videoFrame: { overflow: 'hidden', borderRadius: tokens.radius, backgroundColor: '#050605', borderWidth: 1, borderColor: tokens.cardBorder },
-  progressTrack: { height: 4, overflow: 'hidden', borderRadius: 999, backgroundColor: tokens.cardBorder },
-  progressFill: { height: '100%', borderRadius: 999, backgroundColor: tokens.accent },
+  videoFrame: { overflow: 'hidden', borderRadius: tokens.radius, backgroundColor: '#050605', borderWidth: 1, borderColor: tokens.ink },
+  progressTrack: { height: 3, overflow: 'hidden', borderRadius: 999, backgroundColor: tokens.cardRaised },
+  progressFill: { height: '100%', borderRadius: 999, backgroundColor: tokens.ink },
 });

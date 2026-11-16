@@ -26,7 +26,7 @@ export function TakeFeed({ userId }: { userId: Id<'users'> }) {
     <Muted>Watch as long as it holds you. The takes people stay on rank higher with brands.</Muted>
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.space.sm }}>
       <Avatar name={take.name} color={take.color} size={28} />
-      <Body style={{ fontWeight: '600' }}>{take.name}</Body>
+      <Body style={{ fontFamily: tokens.font.semibold }}>{take.name}</Body>
       <Muted>{take.tag}</Muted>
     </View>
     <Muted>"{take.prompt}"</Muted>

@@ -32,7 +32,7 @@ export function CreatorScout({ brandId }: { brandId: Id<'users'> }) {
   return <>
     <SectionHeader title="Find creators" />
     <Card style={{ gap: tokens.space.md }}>
-      <Body style={{ fontWeight: '600' }}>Which take would you hire?</Body>
+      <Body style={{ fontFamily: tokens.font.semibold }}>Which take would you hire?</Body>
       <Muted>Students film 15-second takes on starter prompts. Your picks train the ranking, so the creators you'd actually pay rise to the top.</Muted>
       {pair === undefined ? <Muted>Loading takes…</Muted> : !pair ? <Muted>You've rated every pair for now. New takes land here as students film them.</Muted> : <>
         <Badge tone="muted">{pair.tag}</Badge>
@@ -50,12 +50,12 @@ export function CreatorScout({ brandId }: { brandId: Id<'users'> }) {
     </Card>
 
     <Card style={{ gap: tokens.space.md }}>
-      <Body style={{ fontWeight: '600' }}>Top creators for you</Body>
+      <Body style={{ fontFamily: tokens.font.semibold }}>Top creators for you</Body>
       <Muted>Ranked by brand picks and how long students keep watching their takes, on the topics you hire for.</Muted>
       {top === undefined ? <Muted>Loading…</Muted> : !top.creators.length ? <Muted>No ranked creators yet.</Muted> : top.creators.map((c, i) => <View key={c.userId} style={{ gap: tokens.space.xs, paddingTop: i ? tokens.space.sm : 0, borderTopWidth: i ? StyleSheet.hairlineWidth : 0, borderColor: tokens.cardBorder }}>
         <View style={styles.row}>
           <Avatar name={c.name} color={c.color} size={32} />
-          <Body style={{ fontWeight: '600' }}>{c.name}</Body>
+          <Body style={{ fontFamily: tokens.font.semibold }}>{c.name}</Body>
           {c.school && <Badge tone="good">{`✓ ${c.school}`}</Badge>}
         </View>
         <Muted>{`#${c.rank} of ${c.of} in ${c.tag}${c.style ? ` · ${c.style}` : ''}`}</Muted>

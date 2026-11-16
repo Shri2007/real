@@ -53,7 +53,7 @@ export function CreatorLane({ userId }: { userId: Id<'users'> }) {
     {!lane.ready || !lane.lanes.length
       ? <Muted>Swipe a few more cards. We watch what you linger on to find the content you'd make best.</Muted>
       : lane.lanes.map((l) => <View key={l.tag} style={{ gap: 2 }}>
-        <Body style={{ fontWeight: '600' }}>{l.lane}</Body>
+        <Body style={{ fontFamily: tokens.font.semibold }}>{l.lane}</Body>
         <Muted>{l.why}{l.jobs ? ` · ${l.jobs} ${l.jobs === 1 ? 'brand' : 'brands'} hiring` : ''}</Muted>
       </View>)}
 

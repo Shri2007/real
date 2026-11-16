@@ -10,11 +10,11 @@ export type DeckItem = FunctionReturnType<typeof api.prefs.deck>[number];
 const SWIPE_PX = 110;
 
 const styles = StyleSheet.create({
-  card: { borderRadius: 28, overflow: 'hidden', backgroundColor: tokens.bg, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 24, shadowOffset: { width: 0, height: 12 }, elevation: 6 },
+  card: { borderRadius: 22, overflow: 'hidden', backgroundColor: tokens.card, borderWidth: 1, borderColor: tokens.ink, shadowColor: tokens.ink, shadowOpacity: 1, shadowRadius: 0, shadowOffset: { width: 5, height: 6 }, elevation: 4 },
   photo: { width: '100%', aspectRatio: 1, backgroundColor: tokens.cardRaised },
   text: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 20, gap: 4 },
-  stamp: { position: 'absolute', top: 18, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.92)' },
-  stampText: { fontSize: 15, fontWeight: '700', letterSpacing: -0.2 },
+  stamp: { position: 'absolute', top: 18, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 6, backgroundColor: tokens.hot, borderWidth: 1, borderColor: tokens.ink },
+  stampText: { fontSize: 13, fontFamily: tokens.font.monoMedium, letterSpacing: 0.4 },
 });
 
 /** One swipeable card: drag right to like, left to pass. `behind` renders the next card, smaller, under the top one. */
@@ -40,16 +40,16 @@ export function DeckCard({ item, onSwipe, onPress, behind }: { item: DeckItem; o
   const body = <View style={styles.card}>
     {item.image ? <Image source={{ uri: item.image }} style={styles.photo} contentFit="cover" transition={150} /> : <View style={styles.photo} />}
     <View style={styles.text}>
-      <Title style={{ fontSize: 24, letterSpacing: -0.5 }}>{item.title}</Title>
+      <Title style={{ fontSize: 34 }}>{item.title}</Title>
       <Body style={{ color: tokens.muted }}>{item.subtitle}</Body>
-      {item.reason ? <Muted style={{ color: tokens.accent, fontSize: 14 }}>{item.reason}</Muted> : null}
+      {item.reason ? <Muted style={{ color: tokens.accent, fontFamily: tokens.font.mono, fontSize: 12.5, marginTop: 4 }}>{item.reason}</Muted> : null}
     </View>
   </View>;
 
   if (behind) return <View pointerEvents="none" style={{ transform: [{ scale: 0.95 }, { translateY: 14 }], opacity: 0.9 }}>{body}</View>;
   return <Animated.View {...pan.panHandlers} style={{ transform: [{ translateX: x }, { rotate }] }}>
     {body}
-    <Animated.View style={[styles.stamp, { left: 18, opacity: like }]}><Body style={{ ...styles.stampText, color: tokens.accent }}>Like</Body></Animated.View>
-    <Animated.View style={[styles.stamp, { right: 18, opacity: nope }]}><Body style={{ ...styles.stampText, color: tokens.bad }}>Pass</Body></Animated.View>
+    <Animated.View style={[styles.stamp, { left: 18, opacity: like }]}><Body style={{ ...styles.stampText, color: tokens.ink }}>like</Body></Animated.View>
+    <Animated.View style={[styles.stamp, { right: 18, opacity: nope }]}><Body style={{ ...styles.stampText, color: tokens.ink }}>pass</Body></Animated.View>
   </Animated.View>;
 }
