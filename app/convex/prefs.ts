@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internalAction, internalMutation, mutation, query, MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
+import { BRAND_IMAGES, CATALOG } from "./catalog";
 
 declare const process: { env: Record<string, string | undefined> };
 
@@ -116,37 +117,35 @@ export const swipe = mutation({
     userId: v.id("users"),
     gigId: v.optional(v.id("gigs")),
     oppId: v.optional(v.id("ugcOpps")),
+    itemKey: v.optional(v.string()),
     dir: v.union(v.literal("right"), v.literal("left")),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const item = args.gigId ? await ctx.db.get(args.gigId) : args.oppId ? await ctx.db.get(args.oppId) : null;
+    const item = args.gigId ? await ctx.db.get(args.gigId) : args.oppId ? await ctx.db.get(args.oppId) : CATALOG.find((c) => c.key === args.itemKey);
     if (!item) throw new Error("Nothing to swipe");
     const prev = await ctx.db
       .query("swipes")
       .withIndex("by_userId_and_item", (q) => q.eq("userId", args.userId).eq("gigId", args.gigId).eq("oppId", args.oppId))
-      .unique();
-    if (prev) return null;
-    await ctx.db.insert("swipes", { userId: args.userId, gigId: args.gigId, oppId: args.oppId, dir: args.dir });
+      .take(1000);
+    if (prev.some((s) => s.itemKey === args.itemKey)) return null;
+    await ctx.db.insert("swipes", { userId: args.userId, gigId: args.gigId, oppId: args.oppId, itemKey: args.itemKey, dir: args.dir });
     await bumpTaste(ctx, args.userId, item.tags, args.dir === "right" ? 1 : -1);
     return null;
   },
 });
 
-const feedItem = v.object({
-  kind: v.union(v.literal("clip"), v.literal("ugc")),
+const deckCard = v.object({
+  kind: v.union(v.literal("item"), v.literal("ugc")),
   id: v.string(),
-  gigId: v.optional(v.id("gigs")),
+  itemKey: v.optional(v.string()),
   oppId: v.optional(v.id("ugcOpps")),
   title: v.string(),
-  byName: v.string(),
-  body: v.optional(v.string()),
+  subtitle: v.string(),
+  image: v.union(v.string(), v.null()),
   tags: v.array(v.string()),
-  cents: v.number(),
-  spotsLeft: v.number(),
-  videoUrl: v.union(v.string(), v.null()),
-  matchPct: v.union(v.number(), v.null()),
-  reason: v.string(),
+  reason: v.union(v.string(), v.null()),
+  ugc: v.optional(v.object({ brand: v.string(), brief: v.string(), cents: v.number(), spotsLeft: v.number() })),
 });
 
 // UGC jobs unlock once the engine has learned something from you, then only jobs that match your taste show.
@@ -184,56 +183,51 @@ async function studentState(ctx: QueryCtx, userId: Id<"users">) {
   return { user, weights, seenGigs, signals, unlocked, matchedOpps };
 }
 
-const matchPct = (weights: Weights, s: number) => (weights.size ? Math.round(50 + 50 * Math.tanh(s / 3)) : null);
 
 // For you: clips ranked by taste (every 4th explores), and, once unlocked, UGC jobs matched to the student
 // slotted in from the top (1st card, then every 3rd).
-export const feed = query({
+// For you: a Tinder-style deck of everyday things (catalog.ts). Swipes train the taste weights; once they've learned
+// enough, every third swipe is a brand with a UGC job that matches your taste.
+export const deck = query({
   args: { userId: v.id("users") },
-  returns: v.array(feedItem),
+  returns: v.array(deckCard),
   handler: async (ctx, { userId }) => {
-    const { weights, seenGigs, matchedOpps } = await studentState(ctx, userId);
-    const name = async (id: Id<"users">) => (await ctx.db.get(id))?.name ?? "?";
-
-    type Item = typeof feedItem.type & { s: number };
-    const clips: Item[] = [];
-    const gigs = await ctx.db.query("gigs").withIndex("by_status", (q) => q.eq("status", "live")).order("desc").take(100);
-    for (const g of gigs) {
-      if (g.creatorId === userId || seenGigs.has(g._id) || g.filled >= g.slots) continue;
-      const { s, liked } = scoreTags(weights, g.tags);
-      clips.push({
-        kind: "clip", id: g._id, gigId: g._id, title: g.title, byName: await name(g.creatorId), body: g.question,
-        tags: g.tags ?? [], cents: g.priceCents, spotsLeft: g.slots - g.filled,
-        videoUrl: await ctx.storage.getUrl(g.videoStorageId),
-        matchPct: matchPct(weights, s),
-        reason: liked.length ? `Because you liked ${liked[0]}` : "New for you", s,
-      });
-    }
-    const ranked = [...clips].sort((a, b) => b.s - a.s);
-    const explore = [...clips].sort((a, b) => a.s - b.s);
-    const orderedClips: (typeof feedItem.type)[] = [];
+    const { weights, matchedOpps } = await studentState(ctx, userId);
+    const swiped = await ctx.db.query("swipes").withIndex("by_userId_and_item", (q) => q.eq("userId", userId)).take(1000);
+    const seen = new Set(swiped.map((s) => s.itemKey).filter(Boolean));
+    type Card = typeof deckCard.type;
+    const scored = CATALOG.filter((c) => !seen.has(c.key)).map((c) => ({ c, ...scoreTags(weights, c.tags) }));
+    const ranked = [...scored].sort((a, b) => b.s - a.s);
+    const explore = [...scored].sort((a, b) => a.s - b.s);
+    const items: Card[] = [];
     const used = new Set<string>();
-    while (orderedClips.length < clips.length) {
-      const exploring = orderedClips.length % 4 === 3;
-      const next = (exploring ? explore : ranked).find((i) => !used.has(i.id))!;
-      used.add(next.id);
-      const { s: _s, ...rest } = next;
-      orderedClips.push(exploring && weights.size ? { ...rest, reason: "Something different" } : rest);
-    }
-
-    const ugc: (typeof feedItem.type)[] = [];
-    for (const { opp: o, s, liked } of matchedOpps) {
-      const gig = o.gigId ? await ctx.db.get(o.gigId) : null;
-      ugc.push({
-        kind: "ugc", id: o._id, oppId: o._id, gigId: o.gigId, title: o.title, byName: await name(o.brandId), body: o.brief,
-        tags: o.tags ?? [], cents: o.payoutCents, spotsLeft: o.spots - o.claimed,
-        videoUrl: gig ? await ctx.storage.getUrl(gig.videoStorageId) : null,
-        matchPct: matchPct(weights, s),
-        reason: `Picked for you: you're into ${liked.slice(0, 2).join(" + ")}`,
+    while (items.length < scored.length) {
+      const exploring = items.length % 4 === 3;
+      const next = (exploring ? explore : ranked).find((i) => !used.has(i.c.key))!;
+      used.add(next.c.key);
+      items.push({
+        kind: "item", id: next.c.key, itemKey: next.c.key, title: next.c.title, subtitle: next.c.subtitle, image: next.c.image, tags: next.c.tags,
+        reason: next.liked.length ? `Because you like ${next.liked[0]}` : null,
       });
     }
-    // Clips are the swipe feed; matched UGC jobs follow them and the app lists them in their own section.
-    return [...orderedClips.slice(0, 30), ...ugc.slice(0, 20)];
+    const jobs: Card[] = [];
+    for (const { opp: o, liked } of matchedOpps.slice(0, 12)) {
+      const brand = await ctx.db.get(o.brandId);
+      const gig = o.gigId ? await ctx.db.get(o.gigId) : null;
+      const [prefix, rest] = gig?.title.includes(":") ? gig.title.split(/:\s*/, 2) : [null, gig?.title ?? null];
+      const brandName = prefix ?? brand?.name ?? "A brand";
+      const tagged = [...CATALOG].sort((x, y) => y.tags.filter((t) => o.tags?.includes(t)).length - x.tags.filter((t) => o.tags?.includes(t)).length)[0];
+      jobs.push({
+        kind: "ugc", id: o._id, oppId: o._id, title: brandName, subtitle: rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : o.brief,
+        image: (brand?.handle && BRAND_IMAGES[brand.handle]) || tagged.image, tags: o.tags ?? [],
+        reason: liked.length ? `Picked for you · you like ${liked.slice(0, 2).join(" + ")}` : "Picked for you",
+        ugc: { brand: brandName, brief: o.brief, cents: o.payoutCents, spotsLeft: o.spots - o.claimed },
+      });
+    }
+    const out: Card[] = [];
+    // Every third swipe overall is a brand with a matching job, so the slot doesn't drift as the deck re-ranks.
+    while (items.length || jobs.length) out.push((swiped.length + out.length) % 3 === 2 && jobs.length ? jobs.shift()! : items.shift() ?? jobs.shift()!);
+    return out.slice(0, 20);
   },
 });
 

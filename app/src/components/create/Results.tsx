@@ -46,9 +46,9 @@ function ResultsContent({ gigId, label }: { gigId: Id<'gigs'>; label?: string })
       {!!gig.question && <Body>{gig.question}</Body>}
     </View>
     <Card style={{ flexDirection: 'row', gap: tokens.space.sm, padding: tokens.space.md, backgroundColor: tokens.cardRaised }}>
-      <View style={{ flex: 1, gap: 3 }}><Title style={{ fontSize: 27 }}>{results.laughedCount}<Muted>/{results.count}</Muted></Title><Muted>ACTUALLY LAUGHED</Muted></View>
-      <View style={{ flex: 1, gap: 3 }}><Title style={{ fontSize: 27 }}>{results.count ? Math.round(results.laughedCount / results.count * 100) : 0}%</Title><Muted>LAUGH RATE</Muted></View>
-      <View style={{ flex: 1, gap: 3 }}><Title style={{ fontSize: 27 }}>{results.verifiedStudentCount}</Title><Muted>VERIFIED</Muted></View>
+      <View style={{ flex: 1, gap: 3 }}><Title style={{ fontSize: 27 }}>{results.laughedCount}<Muted>/{results.count}</Muted></Title><Muted>Actually laughed</Muted></View>
+      <View style={{ flex: 1, gap: 3 }}><Title style={{ fontSize: 27 }}>{results.count ? Math.round(results.laughedCount / results.count * 100) : 0}%</Title><Muted>Laugh rate</Muted></View>
+      <View style={{ flex: 1, gap: 3 }}><Title style={{ fontSize: 27 }}>{results.verifiedStudentCount}</Title><Muted>Verified</Muted></View>
     </Card>
     <Muted>Only valid completed reactions are included. This is not attention or retention data.</Muted>
     {!results.count && <Body>Waiting for reactions. No measured curve yet.</Body>}
@@ -79,7 +79,7 @@ function AiReport({ gigId, report }: { gigId: Id<'gigs'>; report?: string[] }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   return <Card style={{ gap: tokens.space.md, borderColor: tokens.accent, borderWidth: 1 }}>
-    <Badge tone="good">CREATOR TAKEAWAY</Badge>
+    <Badge tone="good">Creator takeaway</Badge>
     <SectionHeader title="What to fix" />
     {report?.length ? report.map((b) => <Body key={b}>• {b}</Body>) : <Muted>No AI report yet. It's written automatically when every slot fills.</Muted>}
     {!!error && <Body>{error}</Body>}

@@ -1,104 +1,88 @@
 import { useMutation, useQuery } from 'convex/react';
 import { useState } from 'react';
-import { View } from 'react-native';
-import { FeedCard } from '@/components/foryou/FeedCard';
+import { Pressable, View } from 'react-native';
+import { DeckCard, DeckItem } from '@/components/foryou/DeckCard';
 import { MyUgc } from '@/components/foryou/MyUgc';
 import { EduVerify } from '@/components/EduVerify';
-import { Watch } from '@/components/react/Watch';
 import { useSession } from '@/lib/session';
-import { Badge, Body, Button, Card, EmptyState, Money, Muted, Screen, SectionHeader, Title, tokens } from '@/ui';
+import { Badge, Body, Button, Card, EmptyState, LargeTitle, Money, Muted, RoundButton, Screen, Segmented, tokens } from '@/ui';
 import { api } from '../../convex/_generated/api';
-import { Id } from '../../convex/_generated/dataModel';
 
-// For you: swipe through preference-ranked paid clips; UGC jobs matched to your taste sit in a small section below.
+// For you: a Tinder-style deck of everyday things. Swipes teach REAL your taste; once it knows you, brands with
+// matching UGC jobs show up in the deck with a small "UGC opportunity" link under the card.
 export default function ForYouScreen() {
   const { userId } = useSession();
-  const feed = useQuery(api.prefs.feed, userId ? { userId } : 'skip');
+  const deck = useQuery(api.prefs.deck, userId ? { userId } : 'skip');
   const taste = useQuery(api.prefs.taste, userId ? { userId } : 'skip');
+  const me = useQuery(api.users.get, userId ? { userId } : 'skip');
   const swipe = useMutation(api.prefs.swipe);
   const claim = useMutation(api.ugc.claim);
-  const me = useQuery(api.users.get, userId ? { userId } : 'skip');
-  const [askVerify, setAskVerify] = useState(false);
-  const [tab, setTab] = useState<'feed' | 'mine'>('feed');
-  const [watching, setWatching] = useState<Id<'gigs'> | null>(null);
+  const [tab, setTab] = useState<'deck' | 'mine'>('deck');
+  const [gone, setGone] = useState<string[]>([]);
+  const [openJob, setOpenJob] = useState(false);
   const [error, setError] = useState('');
-  const [allJobs, setAllJobs] = useState(false);
 
   if (!userId) return <Screen><Muted>Choose your name first.</Muted></Screen>;
-  if (watching) return <Watch key={watching} gigId={watching} userId={userId} onBack={() => setWatching(null)} />;
 
-  const clips = feed?.filter((i) => i.kind === 'clip') ?? [];
-  const jobs = feed?.filter((i) => i.kind === 'ugc') ?? [];
-  const top = clips[0];
-  const run = async (fn: () => Promise<void>) => {
+  const cards = (deck ?? []).filter((c) => !gone.includes(c.id));
+  const [top, next] = cards;
+  const decide = async (card: DeckItem, dir: 'right' | 'left') => {
+    setGone((g) => [...g, card.id]);
+    setOpenJob(false);
     setError('');
-    try { await fn(); } catch (e) { setError(e instanceof Error ? e.message : 'Something went wrong. Try again.'); }
+    try { await swipe({ userId, dir, itemKey: card.itemKey, oppId: card.oppId }); }
+    catch (e) { setError(e instanceof Error ? e.message : 'Something went wrong. Try again.'); }
   };
-  const act = (dir: 'right' | 'left', then?: () => void) => top && run(async () => {
-    await swipe({ userId, dir, gigId: top.gigId });
-    then?.();
-  });
-  const pickJob = (oppId: Id<'ugcOpps'>) => run(async () => {
-    if (!me?.verifiedStudent) { setAskVerify(true); return; }
-    await claim({ oppId, userId });
-    setTab('mine');
-  });
+  const pick = async (card: DeckItem) => {
+    if (!card.oppId || !me?.verifiedStudent) return;
+    setError('');
+    try {
+      await claim({ oppId: card.oppId, userId });
+      setGone((g) => [...g, card.id]);
+      setOpenJob(false);
+      setTab('mine');
+    } catch (e) { setError(e instanceof Error ? e.message : 'Something went wrong. Try again.'); }
+  };
+  const left = taste ? Math.max(0, taste.unlockAt - taste.signals) : null;
 
-  return <Screen style={{ gap: tokens.space.xl }}>
-    <View style={{ gap: tokens.space.xs }}>
-      <Muted>REAL · YOUR REACTION FEED</Muted>
-      <Title style={{ fontSize: 36 }}>For you</Title>
-      <Body>Good clips. Real people. Paid attention.</Body>
-    </View>
-    <View style={{ flexDirection: 'row', gap: tokens.space.sm, padding: 4, borderRadius: tokens.radius, backgroundColor: tokens.card }}>
-      <Button label="Feed" variant={tab === 'feed' ? 'primary' : 'secondary'} onPress={() => setTab('feed')} style={{ flex: 1 }} />
-      <Button label="My UGC" variant={tab === 'mine' ? 'primary' : 'secondary'} onPress={() => setTab('mine')} style={{ flex: 1 }} />
-    </View>
-    {tab === 'mine' ? <MyUgc userId={userId} /> : <>
-      {feed === undefined ? <Muted>Loading your feed…</Muted> : !top ? <EmptyState title="You're all caught up" body="New clips land here as brands post them." /> : <>
-        <FeedCard
-          key={top.id}
-          item={top}
-          onLeft={() => act('left')}
-          onRight={() => act('right')}
-          onPrimary={() => act('right', () => top.gigId && setWatching(top.gigId))}
-        />
-        <Muted>{clips.length - 1} more in your feed · swipes shape what comes next</Muted>
-      </>}
-      {!!error && <Body>{error}</Body>}
+  return <Screen style={{ gap: tokens.space.lg }}>
+    <LargeTitle subtitle="Swipe on what you're into. We'll find brands that want your take.">For you</LargeTitle>
+    <Segmented options={[{ value: 'deck', label: 'Discover' }, { value: 'mine', label: 'My UGC' }]} value={tab} onChange={setTab} />
 
-      <View style={{ gap: tokens.space.sm }}>
-        <SectionHeader title="UGC jobs for you" detail={taste && taste.signals >= taste.unlockAt ? `${jobs.length} MATCHED` : 'LOCKED'} />
-        {taste && taste.signals < taste.unlockAt
-          ? <Muted>🔒 Swipe {taste.unlockAt - taste.signals} more to unlock paid UGC jobs picked for your taste.</Muted>
-          : !jobs.length
-            ? <Muted>No UGC jobs match your taste right now. Keep swiping.</Muted>
-            : <>
-              {(allJobs ? jobs : jobs.slice(0, 2)).map((job) => <Card key={job.id} style={{ gap: tokens.space.xs, padding: tokens.space.md }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: tokens.space.sm }}>
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Body style={{ fontWeight: '700' }}>{job.byName}</Body>
-                    <Muted>{job.reason}</Muted>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}><Money cents={job.cents} /><Muted>per video</Muted></View>
-                </View>
-                <Body>{job.body}</Body>
-                <Button label={me?.verifiedStudent ? "Pick this job" : 'Verify your .edu to pick'} variant="secondary" onPress={() => job.oppId && pickJob(job.oppId)} />
-              </Card>)}
-              {jobs.length > 2 && <Button label={allJobs ? 'Show fewer' : `See all ${jobs.length} jobs`} variant="secondary" onPress={() => setAllJobs(!allJobs)} />}
-            </>}
-        {askVerify && !me?.verifiedStudent && <Card style={{ gap: tokens.space.sm }}>
-          <Body>UGC jobs are for verified students</Body>
-          <EduVerify userId={userId} onVerified={() => setAskVerify(false)} />
-        </Card>}
+    {tab === 'mine' ? <MyUgc userId={userId} /> : deck === undefined ? <Muted>Loading…</Muted> : !top ? <EmptyState title="You're all caught up" body="Check back soon. New brands and drops land here." /> : <>
+      <View>
+        {next && <View style={{ position: 'absolute', left: 0, right: 0, top: 0 }}><DeckCard key={next.id + ':behind'} item={next} behind /></View>}
+        <DeckCard key={top.id} item={top} onSwipe={(dir) => decide(top, dir)} onPress={() => top.ugc && setOpenJob(!openJob)} />
       </View>
 
-      {taste && (taste.liked.length > 0 || taste.disliked.length > 0) && <View style={{ gap: tokens.space.xs }}>
-        <SectionHeader title="Your taste" detail={`${taste.signals} signals`} />
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space.xs }}>
-          {taste.liked.map((t) => <Badge key={t.tag} tone="good">{t.tag}</Badge>)}
-          {taste.disliked.map((t) => <Badge key={t.tag} tone="bad">not {t.tag}</Badge>)}
+      {top.ugc && <Pressable onPress={() => setOpenJob(!openJob)} accessibilityRole="button" style={({ pressed }) => [{ flexDirection: 'row', alignItems: 'center', gap: tokens.space.sm, alignSelf: 'center', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: tokens.accentDim }, pressed && { opacity: 0.7 }]}>
+        <Body style={{ color: tokens.accent, fontSize: 15, fontWeight: '600' }}>UGC opportunity · ${(top.ugc.cents / 100).toFixed(0)} per video {openJob ? '⌃' : '›'}</Body>
+      </Pressable>}
+
+      {top.ugc && openJob && <Card style={{ gap: tokens.space.sm }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Body style={{ fontWeight: '600' }}>{top.ugc.brand} is hiring</Body>
+          <Money cents={top.ugc.cents} />
         </View>
+        <Body>{top.ugc.brief}</Body>
+        <Muted>{top.ugc.spotsLeft} {top.ugc.spotsLeft === 1 ? 'spot' : 'spots'} left · paid when the brand approves your video</Muted>
+        {me?.verifiedStudent
+          ? <Button label="Pick this job" onPress={() => pick(top)} />
+          : <><Muted>UGC jobs are for verified students.</Muted><EduVerify userId={userId} onVerified={() => undefined} /></>}
+      </Card>}
+
+      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 28, paddingTop: tokens.space.xs }}>
+        <RoundButton glyph="✕" label="Pass" onPress={() => decide(top, 'left')} />
+        <RoundButton glyph="♥" label="Like" tone="good" onPress={() => decide(top, 'right')} />
+      </View>
+
+      <Muted style={{ textAlign: 'center' }}>
+        {left === null ? ' ' : left > 0 ? `Swipe ${left} more to unlock UGC opportunities` : 'UGC opportunities picked for your taste show up as you swipe'}
+      </Muted>
+      {!!error && <Body style={{ color: tokens.bad, textAlign: 'center' }}>{error}</Body>}
+
+      {taste && taste.liked.length > 0 && <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space.xs, justifyContent: 'center' }}>
+        {taste.liked.slice(0, 6).map((t) => <Badge key={t.tag} tone="muted">{t.tag}</Badge>)}
       </View>}
     </>}
   </Screen>;

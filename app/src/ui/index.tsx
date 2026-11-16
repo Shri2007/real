@@ -1,34 +1,34 @@
 // Shared UI primitives. ALL screens use these — restyle here to restyle the app.
-// Design: REAL — trustworthy, human, playful. Light mode: white background, black text. Money-green for earnings.
+// Design: REAL — clean, Apple-like. White background, near-black SF text, iOS grays, money-green for earnings.
 import { ReactNode } from 'react';
 import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export const tokens = {
   bg: '#FFFFFF',
-  card: '#F6F7F5',
-  cardRaised: '#EDEFEB',
-  cardBorder: '#E1E4DF',
-  text: '#0A0B0A',
-  muted: '#5E655F',
-  faint: '#C4C9C3',
-  accent: '#15803D',
-  accentDim: 'rgba(21, 128, 61, 0.10)',
-  live: '#15803D',
-  good: '#15803D',
-  bad: '#B4412F',
-  radius: 20,
-  radiusSm: 13,
+  card: '#F5F5F7',
+  cardRaised: '#EDEDF0',
+  cardBorder: '#E5E5EA',
+  text: '#1D1D1F',
+  muted: '#6E6E73',
+  faint: '#C7C7CC',
+  accent: '#1A7F45',
+  accentDim: 'rgba(26, 127, 69, 0.10)',
+  live: '#1A7F45',
+  good: '#1A7F45',
+  bad: '#C0392B',
+  radius: 22,
+  radiusSm: 12,
   pad: 18,
   padLg: 26,
   space: { xs: 5, sm: 9, md: 13, lg: 18, xl: 26, xxl: 36 },
   type: {
-    title: 30,
-    subtitle: 19,
-    body: 16,
-    muted: 13,
+    title: 28,
+    subtitle: 20,
+    body: 17,
+    muted: 15,
     stat: 40,
-    badge: 12,
+    badge: 13,
   },
 };
 
@@ -119,6 +119,46 @@ export function Button({
 
 export function Title({ children, style }: { children: ReactNode; style?: TextStyle }) {
   return <Text style={[styles.title, style]}>{children}</Text>;
+}
+
+/** iOS-style segmented control. */
+export function Segmented<T extends string>({ options, value, onChange }: { options: { value: T; label: string }[]; value: T; onChange: (v: T) => void }) {
+  return (
+    <View style={styles.segmented}>
+      {options.map((o) => {
+        const on = o.value === value;
+        return (
+          <Pressable key={o.value} onPress={() => onChange(o.value)} accessibilityRole="button" accessibilityState={{ selected: on }} style={[styles.segment, on && styles.segmentOn]}>
+            <Text style={[styles.segmentText, on && styles.segmentTextOn]}>{o.label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/** Round icon button, e.g. pass / like under a swipe card. */
+export function RoundButton({ glyph, label, onPress, tone = 'muted', size = 64 }: { glyph: string; label: string; onPress: () => void; tone?: 'muted' | 'good'; size?: number }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => [styles.round, { width: size, height: size, borderRadius: size / 2 }, pressed && styles.buttonPressed]}
+    >
+      <Text style={{ fontSize: size * 0.38, color: tone === 'good' ? tokens.accent : tokens.muted, fontWeight: '600' }}>{glyph}</Text>
+    </Pressable>
+  );
+}
+
+/** iOS large navigation title (34pt bold), the top of each tab. */
+export function LargeTitle({ children, subtitle }: { children: ReactNode; subtitle?: string }) {
+  return (
+    <View style={{ gap: 2 }}>
+      <Text style={styles.largeTitle}>{children}</Text>
+      {subtitle ? <Text style={styles.muted}>{subtitle}</Text> : null}
+    </View>
+  );
 }
 
 export function Body({ children, style }: { children: ReactNode; style?: TextStyle }) {
@@ -310,11 +350,9 @@ const styles = StyleSheet.create({
     backgroundColor: tokens.card,
     borderRadius: tokens.radius,
     padding: tokens.pad,
-    borderWidth: 1,
-    borderColor: tokens.cardBorder,
   },
   button: {
-    borderRadius: tokens.radius,
+    borderRadius: 14,
     paddingVertical: 15,
     paddingHorizontal: tokens.pad,
     alignItems: 'center',
@@ -337,28 +375,42 @@ const styles = StyleSheet.create({
   },
   buttonLabel: {
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '600',
     fontSize: tokens.type.body,
-    letterSpacing: -0.15,
+    letterSpacing: -0.4,
   },
   buttonLabelSecondary: {
     color: tokens.text,
   },
+  segmented: { flexDirection: 'row', backgroundColor: tokens.cardRaised, borderRadius: 10, padding: 2 },
+  segment: { flex: 1, paddingVertical: 7, borderRadius: 8, alignItems: 'center' },
+  segmentOn: { backgroundColor: tokens.bg, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
+  segmentText: { color: tokens.muted, fontSize: 14, fontWeight: '500', letterSpacing: -0.2 },
+  segmentTextOn: { color: tokens.text, fontWeight: '600' },
+  round: { alignItems: 'center', justifyContent: 'center', backgroundColor: tokens.bg, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  largeTitle: {
+    color: tokens.text,
+    fontSize: 34,
+    fontWeight: '700',
+    letterSpacing: -0.8,
+  },
   title: {
     color: tokens.text,
     fontSize: tokens.type.title,
-    fontWeight: '800',
-    letterSpacing: -0.8,
+    fontWeight: '700',
+    letterSpacing: -0.6,
   },
   body: {
     color: tokens.text,
     fontSize: tokens.type.body,
     lineHeight: 22,
+    letterSpacing: -0.4,
   },
   muted: {
     color: tokens.muted,
     fontSize: tokens.type.muted,
-    lineHeight: 18,
+    lineHeight: 20,
+    letterSpacing: -0.2,
   },
   badge: {
     alignSelf: 'flex-start',
@@ -380,8 +432,8 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: tokens.type.badge,
-    fontWeight: '700',
-    letterSpacing: 0.2,
+    fontWeight: '600',
+    letterSpacing: -0.1,
   },
   badgeTextGood: {
     color: tokens.good,
@@ -406,7 +458,7 @@ const styles = StyleSheet.create({
   money: {
     color: tokens.accent,
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '700',
     fontVariant: ['tabular-nums'],
   },
   moneyLg: {
@@ -419,7 +471,7 @@ const styles = StyleSheet.create({
   statValue: {
     color: tokens.text,
     fontSize: tokens.type.stat,
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: -1,
     fontVariant: ['tabular-nums'],
   },
@@ -456,8 +508,8 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: tokens.text,
     fontSize: tokens.type.subtitle,
-    fontWeight: '700',
-    letterSpacing: -0.35,
+    fontWeight: '600',
+    letterSpacing: -0.45,
   },
   sectionDetail: {
     color: tokens.muted,

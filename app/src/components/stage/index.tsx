@@ -84,7 +84,7 @@ export function Stage({ gigId, onClose }: { gigId: Id<'gigs'>; onClose: () => vo
     <View ref={root} style={mediaLayout.root}>
       <Screen style={mediaLayout.content}>
           <View style={mediaLayout.row}>
-            <View style={{ flex: 1, gap: 2 }}><Muted>REAL · LIVE REACTION ROOM</Muted><Title>{gig?.title ?? 'Live reactions'}</Title></View>
+            <View style={{ flex: 1, gap: 2 }}><Muted>Live reaction room</Muted><Title>{gig?.title ?? 'Live reactions'}</Title></View>
             <Button label="Close" variant="secondary" onPress={onClose} />
             <Button label="Replay" variant="secondary" onPress={() => setReplay(n => n + 1)} />
             {Platform.OS === 'web' && <Button label="Fullscreen" variant="secondary" onPress={() => void fullscreen()} />}
