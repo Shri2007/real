@@ -71,8 +71,13 @@ export const transcribe = internalAction({
       reactionId: args.reactionId, audioStorageId: info.audioStorageId, whyDurationMs: info.durationMs, whyText: "", whyTags: [],
       worked: [], sucked: [], qualityScore: 0, generic: true, citesSpecific: false,
     });
+    // Our AI failed, not the student: score neutrally so base pay still goes through (no bonus).
+    const finalizeFallback = async (whyText = "") => ctx.runMutation(internal.reactions.finalizeReaction, {
+      reactionId: args.reactionId, audioStorageId: info.audioStorageId, whyDurationMs: info.durationMs, whyText, whyTags: [],
+      worked: [], sucked: [], qualityScore: 0.5, generic: false, citesSpecific: true, aiUnavailable: true,
+    });
     const key = process.env.OPENAI_API_KEY;
-    if (!key) { await finalizeEmpty(); return null; }
+    if (!key) { await finalizeFallback(); return null; }
     const audio = await ctx.storage.get(info.audioStorageId);
     if (!audio) { await finalizeEmpty(); return null; }
 
@@ -83,13 +88,13 @@ export const transcribe = internalAction({
       method: "POST", headers: { Authorization: `Bearer ${key}` }, body: form,
     }).catch(async (error: unknown) => {
       console.error(error);
-      await finalizeEmpty();
+      await finalizeFallback();
       return null;
     });
     if (!sttRes) return null;
     if (!sttRes.ok) {
       console.error(`Transcription failed: ${sttRes.status}`);
-      await finalizeEmpty();
+      await finalizeFallback();
       return null;
     }
     const whyText = ((await sttRes.json()) as { text?: string }).text?.trim() ?? "";
@@ -147,6 +152,8 @@ export const transcribe = internalAction({
     } catch (e) {
       console.error(e);
     }
+
+    if (!extracted) { await finalizeFallback(whyText); return null; }
 
     // Never invent words: the quote must appear in the transcript, else fall back to its first words.
     const candidate = extracted?.quote?.trim() ?? "";

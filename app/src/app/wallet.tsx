@@ -110,7 +110,7 @@ export default function WalletScreen() {
               if (!userId) return;
               setBusy(true);
               try {
-                const { status } = await cashout({});
+                const { status } = await cashout({ userId });
                 if (status === 'failed') Alert.alert('Cash out failed', 'Whop could not send it. The money is back on your balance.');
                 else if (status === 'pending') Alert.alert('Cash out requested', 'Recorded as pending. Link your Whop account to get paid instantly next time.');
                 else Alert.alert('Cash out sent', 'Your money is on its way to your Whop balance.');

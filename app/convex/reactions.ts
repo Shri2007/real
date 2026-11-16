@@ -163,6 +163,7 @@ export const finalizeReaction = internalMutation({
     reactionId: v.id("reactions"), audioStorageId: v.id("_storage"), whyDurationMs: v.number(), whyText: v.string(),
     whyQuote: v.optional(v.string()), whyTags: v.array(v.string()), whySentiment: v.optional(v.union(v.literal("pos"), v.literal("neg"), v.literal("mixed"))),
     worked: v.array(v.string()), sucked: v.array(v.string()), qualityScore: v.number(), generic: v.boolean(), citesSpecific: v.boolean(),
+    aiUnavailable: v.optional(v.boolean()), // transcription/grading failed on our side → neutral base pay, no bonus
   },
   returns: v.object({ finalized: v.boolean(), valid: v.boolean(), earnedCents: v.number(), bonusCents: v.number(), reason: v.string() }),
   handler: async (ctx, args) => {
@@ -176,8 +177,11 @@ export const finalizeReaction = internalMutation({
     let trust = user.trust ?? 0.5;
     let flagCount = user.flagCount ?? 0;
     let qualityScore = Math.max(0, Math.min(1, args.qualityScore));
-    if (args.generic) qualityScore = Math.min(qualityScore, 0.2);
-    if (!args.citesSpecific) qualityScore = Math.min(qualityScore, 0.4);
+    if (args.aiUnavailable) qualityScore = 0.5;
+    else {
+      if (args.generic) qualityScore = Math.min(qualityScore, 0.2);
+      if (!args.citesSpecific) qualityScore = Math.min(qualityScore, 0.4);
+    }
     const normalizedWhy = normalize(args.whyText);
     const praises = /\b(funny|hilarious|loved it|love it|made me laugh|laughed)\b/.test(normalizedWhy);
     const mismatch = praises && !reaction.laughed && reaction.peak < 0.2;
@@ -201,7 +205,7 @@ export const finalizeReaction = internalMutation({
     if (qualityScore >= 0.7) trust = Math.min(1, trust + 0.02);
 
     const wordCount = normalizedWhy ? normalizedWhy.split(" ").length : 0;
-    const minReviewOk = args.whyDurationMs >= MIN_REVIEW_MS && wordCount >= MIN_WORDS;
+    const minReviewOk = args.whyDurationMs >= MIN_REVIEW_MS && (args.aiUnavailable || wordCount >= MIN_WORDS);
     let reason = "";
     let baseCents = 0;
     let bonusCents = 0;
