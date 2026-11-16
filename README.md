@@ -1,87 +1,192 @@
-# REAL: verified Gen Z reactions + the why, before you post or launch
+<div align="center">
 
-YC Consumer Mobile Hackathon, Nov 15, 2026. Team: Shri + Vishnu. (Pivoted at 10:45 from OPEN MIC after judge feedback: "zero impact"; the judges suggested a niche UGC marketplace.)
+# *REAL*
 
-> **Brands and creators are flying blind on Gen Z: bots inflate every metric, and AI fakes every testimonial.** Test your ad, product video or post on **verified students** first: their faces prove they watched, their voices say why. Students use REAL as a **For you feed that learns their taste**: they swipe on clips, react on camera and get paid. Once the feed knows them, they unlock **paid UGC jobs picked for their taste** and make content for the brands. **We pay for attention, not applause**, so nobody has a reason to fake it.
+### Verified Gen Z reactions + the why, before you post or launch.
 
-- **Build plan, lanes, API contract:** [`docs/TASKS.md`](docs/TASKS.md) (demo seed + Keiki tool setup at the bottom)
-- **Agent rules:** [`AGENTS.md`](AGENTS.md)
-- **Commands:** [`docs/COMMANDS.md`](docs/COMMANDS.md) · **Env/secrets:** [`docs/ENV.md`](docs/ENV.md)
+**We pay for attention, not applause.**
+
+![Expo](https://img.shields.io/badge/Expo-SDK_58-000020?logo=expo&logoColor=white)
+![Convex](https://img.shields.io/badge/Convex-backend-F3B0C3)
+![Whop](https://img.shields.io/badge/Whop-payments-FF6243)
+![Keiki](https://img.shields.io/badge/Keiki-iMessage_agent-1B7F4B)
+![Revyl](https://img.shields.io/badge/Revyl-every_PR_tested-5B8CFF)
+![Capy](https://img.shields.io/badge/Capy-coding_agents-C9B8FF)
+![OpenAI](https://img.shields.io/badge/OpenAI-grading-412991?logo=openai&logoColor=white)
+
+**YC Consumer Mobile Hackathon · Nov 15, 2026 · Shri + Vishnu**
+
+[Demo video](video/REAL-demo.mp4) · [Build plan](docs/TASKS.md) · [Commands](docs/COMMANDS.md) · [Env / secrets](docs/ENV.md)
+
+</div>
+
+---
+
+## The problem
+
+Brands spend billions guessing what Gen Z likes. Focus groups are staged, likes are bots, comments are noise, and nobody can tell you **which second** of your ad lost people, or **why**. Meanwhile Gen Z scrolls for hours a day and gets paid nothing for the one thing brands want: honest taste.
+
+**REAL connects the two.** Students get paid every day for honest attention. Brands get the truth before they spend.
+
+## What it looks like
+
+<table>
+<tr>
+<td align="center"><img src="docs/img/create.jpg" width="200"><br><b>Brand posts a clip</b><br>slots, price, pay with Whop</td>
+<td align="center"><img src="docs/img/react.jpg" width="200"><br><b>Student reacts</b><br>camera on, face verified</td>
+<td align="center"><img src="docs/img/laughed.jpg" width="200"><br><b>"You laughed"</b><br>then hold to say why</td>
+<td align="center"><img src="docs/img/wallet.jpg" width="200"><br><b>Wallet</b><br>pending, cap, reviewer score</td>
+</tr>
+<tr>
+<td align="center"><img src="docs/img/foryou.jpg" width="200"><br><b>For you</b><br>a deck that learns your taste</td>
+<td align="center"><img src="docs/img/ugc.jpg" width="200"><br><b>Your UGC lane</b><br>15s take, AI scores it</td>
+<td align="center"><img src="docs/img/whop.jpg" width="200"><br><b>Whop checkout</b><br>started from an iMessage</td>
+<td></td>
+</tr>
+</table>
+
+## Why people open it every day
+
+- **Fresh paid clips land daily.** Watch a 15-second clip, react, get paid. Under a minute.
+- **A For you deck that learns you** from swipes and watch time, then unlocks paid UGC jobs that fit your style.
+- **A wallet that moves:** pending turns into available, your reviewer score climbs, cash out any time.
+- **A calm daily cap** ($25/day, 3 minutes between paid reactions) makes it a ritual, not a grind.
+- **Brands come back daily too:** every reaction updates their live curve, and A/B tells them which cut to post today.
 
 ## How it works
 
 ```mermaid
 flowchart LR
-  subgraph Student["Student (app)"]
-    O[Student / brand picker → name → .edu code or demo pass → interests] --> F[For you feed]
-    F -->|swipe| T[Taste profile]
-    F -->|Watch & earn| W[Camera reaction + hold-to-talk why]
-    W --> T
-    T --> F
-    T -->|after 5 signals| U[UGC jobs matched to you]
-    U --> V[Film / upload] --> P[Approved → paid]
+  subgraph Brand["Brand / creator"]
+    A["Post clip<br/>app or iMessage (Keiki)"] --> B["Pay with Whop"]
+    R["Live results<br/>curve, quotes, AI fixes, A/B"]
   end
-  subgraph Brand["Brand / creator (app or Keiki iMessage)"]
-    C[Post clip + pay via Whop] --> R[Live results: curve, quotes, AI fixes, segments]
-    R --> J[Post UGC job + fund via Whop]
-    J --> A[Approve student videos]
+  subgraph Student["Verified student"]
+    C["For you deck<br/>taste engine"] --> D["Watch, camera on<br/>on-device face detection"]
+    D --> E["Hold to say why<br/>AI grades the review"]
+    E --> F["Paid, pending 24h<br/>cash out via Whop"]
   end
-  C --> F
-  W --> R
-  J --> U
-  V --> A
+  B -- "signed payment webhook<br/>goes live" --> C
+  D --> R
+  E --> R
 ```
 
-### Student side
-- **Onboarding:** first pick **student / creator** or **brand / company** (brands skip straight to Create). Students set a name and color, then verify their `.edu`: we **email a 6-digit code** (Gmail SMTP from a Convex node action, Resend as a fallback), and only a correct code gives the "✓ Verified student · School" badge. One verified account per school email. **Judges without a .edu** tap "Judging the demo? No .edu needed" and enter the demo pass (`DEMO_PASS`, default `yc2026`) to get the same unlocks. Then pick 3+ interests to seed the feed.
-- **For you tab (preference engine):** a Tinder-style deck of everyday things with photos (baggy jeans, iced lattes, desk setups, road trips…). Swipe right or tap ♥ to like, left or ✕ to pass. Each card is tagged, and each student has per-tag weights that move with swipes (±1), laughing during a reaction (+1), a positive or negative voice "why" (±1), and claiming a job (+2). The deck ranks by those weights, every 4th card explores something different, and cards say why ("Because you like fashion").
-- **Reacting:** a 3-2-1 countdown, then on-device face detection (MediaPipe in a WebView) draws a laugh curve. No video is uploaded. Paid the same whether they laugh or not (watched to the end, face in frame ≥70%). Then **hold to say why** (3–15s), transcribed into a quote and reason tags.
-- **Tailored UGC jobs:** locked until the engine has 5 signals ("Swipe N more to unlock"). After that, every third swipe is a brand whose UGC job matches the student's taste, with a small "UGC opportunity · $125 per video" link under the card. Tapping it opens the brief and "Pick this job" (verified students only). Pick → film or upload → brand approves → paid to wallet.
-- **Wallet:** balance, taste profile, history (reactions, approved UGC, cash-outs). **Cash out** sends a Whop sandbox balance transfer to the student's linked Whop account (link by username in Wallet); unlinked students get a pending payout. History shows each cash-out as Paid / Sending / Pending / Failed (failed transfers go back to the balance).
+1. **Brand posts a clip**, asks one question, picks slots and price, and pays with **Whop**. It goes live the moment Whop's signed webhook arrives.
+2. **A verified student** (`.edu` code, or the judges' demo pass `yc2026`) watches with the front camera on. **On-device MediaPipe face detection** proves a human watched and draws a second-by-second laugh curve. No face video leaves the phone.
+3. **They hold to talk and say why.** AI extracts a verbatim quote, *what worked*, *what sucked*, and grades how specific it is.
+4. **The brand sees the truth:** reaction curve, quotes, an AI "what to fix" report, who it landed with, and **A/B compare**.
 
-### Brand / creator side
-- **Create a test:** upload a clip of 30s or less, set slots and price, pay with **Whop** (slots × price + 20%), or publish a free demo.
-- **Live Results:** laugh curve over the video, "What people said" quotes and top reasons, an AI "What to fix" report (3 timestamped edits, auto-written when slots fill), "Who it landed with" (verified / school / taste segments), A/B compare, and **Present** (projector view).
-- **UGC jobs:** post a brief, payout and spots, then fund them with Whop UGC credits. Review submitted videos: Approve & pay, or Pass.
-- **Keiki (iMessage):** text a clip to make a test and get results texted back. Tools for UGC jobs, review and inbox updates are on the backend (`/keiki/*`); see `docs/TASKS.md`.
+## Built so you can't farm it
 
-## Status (17:00 freeze)
-| Area | State |
+```mermaid
+flowchart TD
+  S["Review submitted"] --> W{"Watched to end,<br/>face in frame 70%+?"}
+  W -- no --> Z["$0 + reason"]
+  W -- yes --> V{"4s+ voice, 8+ words?"}
+  V -- no --> Z
+  V -- yes --> Q["AI quality score"]
+  Q --> G{"Generic, duplicate,<br/>mismatch, honeypot fail?"}
+  G -- yes --> Z
+  G -- no --> L{"Under 3-min cooldown,<br/>50/day or $25/day cap?"}
+  L -- yes --> Z
+  L -- no --> P["Base pay"]
+  P --> H{"Quality 0.7+?"}
+  H -- yes --> B["+ up to 50% bonus"]
+  H -- no --> K["Pending 24h"]
+  B --> K
+```
+
+- **Laugh or stay deadpan, both get paid.** We never reward faking it.
+- **A laugh only counts if it's sustained** (1.5s+ on a smoothed curve), recomputed on the server.
+- **"It was good" earns $0.** Specific, moment-level feedback earns up to +50%.
+- **Trust score** per student. Brands can mark a review "not helpful" and claw back pending pay (max 3 per test).
+- **If our AI fails, students still get base pay.** Low-effort reviews never do.
+
+## Whop is the whole economy
+
+| Direction | What happens |
 |---|---|
-| Clip test → camera reaction → paid → live results, A/B, stage | ✅ merged, used on phones earlier |
-| Hold-to-talk why → quotes, AI report, segment insights | ✅ merged; OpenAI live-tested (tags, report) |
-| For you feed + preference engine, interest picker | ✅ merged; backend-tested |
-| Tailored UGC jobs (unlock + taste match), claim → submit → approve → paid | ✅ merged; backend-tested |
-| Student / brand picker, `.edu` code, judge demo pass | ✅ merged; tested on a local backend + Expo web; Gmail send delivered a real code |
-| Whop checkout + webhook (tests and UGC credits) | ✅ payment → webhook → live verified at 13:53 (needs `WHOP_API_KEY` + `WHOP_COMPANY_ID` on dev) |
-| Wallet cash-out via Whop transfer | 🟡 merged; tested against a mock Whop API only. A real transfer needs the sandbox company balance funded |
-| UI redesign | ✅ merged (#37) |
-| Keiki agent: UGC/inbox tools | 🟡 backend routes live; tools need adding to the REAL agent (Shri's Keiki account) |
-| Revyl core-flow test | 🟡 updated for the new onboarding (demo pass path); run `revyl test push` from `app/` |
-| New screens on a real phone | ⬜ not yet tried |
+| Money in | Brands fund reaction tests through a Whop checkout created per test, with the test's ID in the payment metadata |
+| Money in | Brands fund paid UGC jobs through a second Whop checkout |
+| Go-live | A test only goes live when Whop's signed `payment.succeeded` webhook verifies. No payment, no test |
+| Money out | Students link a Whop account and cash out as Whop transfers. Failed transfers return to their balance |
+| Trust | 24h pending hold before earnings become available, so brands can claw back unhelpful reviews |
 
-**Demo backend:** Convex dev deployment `hip-partridge-245`, seeded with `npx convex run seed:demo` + `seed:moreUgc` (8 brands, 12 clips, 12 UGC jobs, one finished test). Before the demo it needs, in Convex env: `WHOP_API_KEY`, `WHOP_COMPANY_ID`, `WHOP_WEBHOOK_SECRET`, `GMAIL_USER`, `GMAIL_APP_PASSWORD` (optional `DEMO_PASS`). See [`docs/ENV.md`](docs/ENV.md).
+## Keiki: no app needed
 
-## Demo script (3 min)
-1. **Hook (15s).** "Brands are flying blind on Gen Z: bots fake the views, AI fakes the testimonials. REAL pays verified students to react honestly, and we pay for attention, not applause."
-2. **Brand posts a test (30s).** Create → New test → upload a short ad, 5 slots, pay with Whop (sandbox). The test goes live in everyone's feed. (Or text the clip to the REAL Keiki line.)
-3. **Student joins (30s).** Fresh phone: "I'm a student / creator" → name → `.edu` code arrives by email. Judges without a .edu: "Judging the demo? No .edu needed" → `yc2026`. Pick 3 interests.
-4. **For you + reaction (45s).** Swipe a few cards, show the match % and "Because you liked…". Watch & earn: camera on, laugh curve, hold to say why. Paid either way.
-5. **Results land live (30s).** Back on the brand phone: laugh curve, "What people said" quotes, AI "What to fix" with timestamps, who it landed with. Hit Present for the big screen.
-6. **Tailored UGC + money (30s).** After 5 swipes the student unlocks UGC jobs picked for their taste → pick one → film → brand approves → wallet. Cash out to Whop.
-7. **Close (10s).** "Every number is a verified human. Brands know what lands before they spend; students get paid for their taste."
+```mermaid
+sequenceDiagram
+  participant B as Brand (iMessage)
+  participant K as Keiki agent
+  participant C as Convex
+  participant W as Whop
+  B->>K: texts a clip
+  K->>C: real_create_gig (attachment, slots, price)
+  C->>W: create checkout
+  W-->>K: pay link
+  K-->>B: texts the pay link
+  B->>W: pays
+  W->>C: signed webhook, test goes live
+  B->>K: "how did it do?"
+  K->>C: real_gig_results
+  K-->>B: laughs, peak moment, quotes, what to fix
+```
 
-**Fallbacks:** no camera or bad light → still shows "Not paid · keep your face in frame" (that's the anti-fake rule working). Email slow → demo pass. Whop down → cash-out records a pending payout.
+Custom tools (`real_create_gig`, `real_creator_status`, `real_gig_results`) call secret-gated Convex HTTP actions (`/keiki/*`). iMessage video attachments are fetched safely through redirects before becoming a test.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  APP["Expo / React Native<br/>Expo Router + MediaPipe WebView"] <--> CVX[("Convex<br/>DB, storage, scheduler,<br/>HTTP actions")]
+  KEI["Keiki<br/>iMessage agent"] -- "/keiki/*" --> CVX
+  CVX <-- "checkout, webhook,<br/>transfers" --> WHOP["Whop"]
+  CVX -- "transcribe, grade,<br/>tag, report" --> OAI["OpenAI"]
+  REV["Revyl<br/>cloud iPhone per PR"] -. tests .-> APP
+  CAPY["Capy agents"] -. open PRs .-> APP
+```
+
+| Layer | Tech |
+|---|---|
+| App | Expo SDK 58, Expo Router, React Native, MediaPipe Face Landmarker in a WebView |
+| Backend | Convex (queries, mutations, actions, file storage, scheduled jobs, HTTP actions) |
+| Payments | Whop (checkout, signed webhooks, cash-out transfers) |
+| Messaging | Keiki iMessage agent with custom tools |
+| AI | OpenAI (transcription, review grading, tags, "what to fix", creator take scoring) |
+| Quality | Revyl preview build + E2E test on every PR |
+| Velocity | Capy parallel coding agents, 50+ PRs merged in one day |
 
 ## Sponsors
-| Sponsor | Role |
-|---|---|
-| **Convex** (required) | all data, the live results, the preference engine, verification codes, scheduled AI jobs |
-| **Capy** (required) | built the voice why, Whop + AI report, For you + UGC, demo seed, tailored UGC, `.edu` codes, demo pass, Whop cash-out (`capy/*` PRs) |
-| **Revyl** (required) | every PR built + checked on a cloud iPhone (Proof of Changes) |
-| **Whop** | brands pay per test and fund UGC jobs; students cash out via Whop balance transfers |
-| **Keiki** | brands test clips, post UGC jobs and approve videos over iMessage |
-| **OpenAI** | transcription, quote extraction, AI tags, "What to fix" report |
 
-## Money
-A brand pays per reaction slot + 20% platform fee, and funds UGC jobs (payout × spots + 20%). Students earn per valid reaction and per approved UGC video.
+| Sponsor | What it does here |
+|---|---|
+| **Convex** | Everything: data, live results, taste engine, verification codes, scheduled AI jobs, Whop and Keiki endpoints |
+| **Whop** | Both sides of the money: checkout in, cash-out out, webhook-verified go-live |
+| **Keiki** | Brands run the whole flow from iMessage: post a clip, pay, get results texted back |
+| **Revyl** | Every PR built and tested on a cloud iPhone with Proof of Changes |
+| **Capy** | Parallel agents shipped the For you deck, UGC lane, creator ranking and more |
+| **OpenAI** | Voice transcription, feedback grading, tagging, reports |
+
+## Run it
+
+```bash
+cd app
+npm install
+npx convex dev            # backend (writes .env.local)
+npx expo start --tunnel   # scan the QR with Expo Go
+```
+
+Convex env vars (`WHOP_API_KEY`, `WHOP_COMPANY_ID`, `WHOP_WEBHOOK_SECRET`, `OPENAI_API_KEY`, `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `KEIKI_TOOL_SECRET`, optional `DEMO_PASS`, `DEMO_INSTANT_RELEASE`) are listed in [`docs/ENV.md`](docs/ENV.md). Secrets never go in the app.
+
+**Judges:** tap "Judging the demo? No .edu needed" and enter `yc2026`.
+
+## Challenges we hit
+
+- Face detection fully on-device inside Expo Go, scored every frame.
+- Whop sandbox: the API key and business ID must come from the same business, plan titles max 30 chars, and signed webhooks need exact verification.
+- Keiki: one phone number binds to one agent, and attachments arrive as IDs that need fetching.
+- Making REAL hard to farm without being unfair to honest students.
+
+## Docs
+
+[`docs/TASKS.md`](docs/TASKS.md) build plan and API contract · [`AGENTS.md`](AGENTS.md) agent rules · [`docs/COMMANDS.md`](docs/COMMANDS.md) · [`docs/ENV.md`](docs/ENV.md) · [`docs/REVYL_SETUP.md`](docs/REVYL_SETUP.md)
