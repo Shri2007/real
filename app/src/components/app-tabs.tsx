@@ -7,7 +7,7 @@ export default function AppTabs() {
   return (
     <NativeTabs
       tintColor={tokens.accent}
-      labelStyle={{ fontSize: 11, fontWeight: '600' }}
+      labelStyle={{ fontSize: 11, fontFamily: tokens.font.medium }}
     >
       <NativeTabs.Trigger name="foryou">
         <NativeTabs.Trigger.Label>For you</NativeTabs.Trigger.Label>

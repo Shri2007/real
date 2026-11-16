@@ -49,9 +49,9 @@ export function TabButton({
         <SymbolView
           name={{ web: webSymbol }}
           size={14}
-          tintColor={isFocused ? tokens.accent : tokens.muted}
+          tintColor={isFocused ? tokens.bg : tokens.ink}
         />
-        <Body style={{ color: isFocused ? tokens.text : tokens.muted, fontSize: 13, fontWeight: '600' }}>
+        <Body style={{ color: isFocused ? tokens.bg : tokens.ink, fontSize: 13, fontFamily: tokens.font.medium }}>
           {children}
         </Body>
       </View>
@@ -63,7 +63,7 @@ export function CustomTabList(props: TabListProps) {
   return (
     <View {...props} style={styles.tabListContainer}>
       <View style={styles.innerContainer}>
-        <Muted style={styles.brandText}>REAL</Muted>
+        <Muted style={styles.brandText}>real.</Muted>
         {props.children}
       </View>
     </View>
@@ -81,12 +81,12 @@ const styles = StyleSheet.create({
   },
   innerContainer: {
     paddingVertical: tokens.space.sm,
-    paddingHorizontal: tokens.space.lg,
+    paddingHorizontal: tokens.space.md,
     borderRadius: tokens.radius,
     flexDirection: 'row',
     alignItems: 'center',
     flexGrow: 1,
-    gap: tokens.space.sm,
+    gap: 2,
     maxWidth: 720,
     backgroundColor: tokens.card,
     borderWidth: StyleSheet.hairlineWidth,
@@ -94,9 +94,10 @@ const styles = StyleSheet.create({
   },
   brandText: {
     marginRight: 'auto',
-    fontWeight: '800',
-    color: tokens.accent,
-    letterSpacing: 1,
+    fontFamily: tokens.font.displayItalic,
+    fontSize: 24,
+    color: tokens.ink,
+    paddingRight: tokens.space.sm,
   },
   pressed: {
     opacity: 0.7,
@@ -104,12 +105,12 @@ const styles = StyleSheet.create({
   tabButtonView: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: tokens.space.sm,
-    paddingHorizontal: tokens.space.md,
-    borderRadius: tokens.radiusSm,
+    gap: 5,
+    paddingVertical: 7,
+    paddingHorizontal: 9,
+    borderRadius: 999,
   },
   tabButtonFocused: {
-    backgroundColor: tokens.accentDim,
+    backgroundColor: tokens.ink,
   },
 });

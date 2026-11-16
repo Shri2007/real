@@ -1,12 +1,14 @@
 import { ConvexProvider, ConvexReactClient } from 'convex/react';
 import { DefaultTheme, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
 import { Onboarding } from '@/components/onboarding';
 import { SessionProvider, useSession } from '@/lib/session';
+import { fontAssets, tokens } from '@/ui';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -20,10 +22,12 @@ function Gate() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts(fontAssets);
+  if (!fontsLoaded && !fontError) return null;
   return (
     <ConvexProvider client={convex}>
       <SessionProvider>
-        <ThemeProvider value={{ ...DefaultTheme, colors: { ...DefaultTheme.colors, background: '#FFFFFF', card: '#FFFFFF', text: '#0A0B0A' } }}>
+        <ThemeProvider value={{ ...DefaultTheme, colors: { ...DefaultTheme.colors, background: tokens.bg, card: tokens.bg, text: tokens.text } }}>
           <StatusBar style="dark" />
           <AnimatedSplashOverlay />
           <Gate />

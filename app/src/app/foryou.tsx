@@ -63,13 +63,13 @@ export default function ForYouScreen() {
         <DeckCard key={top.id} item={top} onSwipe={(dir) => decide(top, dir)} onPress={() => top.ugc && setOpenJob(!openJob)} />
       </View>
 
-      {top.ugc && <Pressable onPress={() => setOpenJob(!openJob)} accessibilityRole="button" style={({ pressed }) => [{ flexDirection: 'row', alignItems: 'center', gap: tokens.space.sm, alignSelf: 'center', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: tokens.accentDim }, pressed && { opacity: 0.7 }]}>
-        <Body style={{ color: tokens.accent, fontSize: 15, fontWeight: '600' }}>UGC opportunity · ${(top.ugc.cents / 100).toFixed(0)} per video {openJob ? '⌃' : '›'}</Body>
+      {top.ugc && <Pressable onPress={() => setOpenJob(!openJob)} accessibilityRole="button" style={({ pressed }) => [{ flexDirection: 'row', alignItems: 'center', gap: tokens.space.sm, alignSelf: 'center', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 6, backgroundColor: tokens.hot, borderWidth: 1, borderColor: tokens.ink }, pressed && { opacity: 0.7 }]}>
+        <Body style={{ color: tokens.ink, fontSize: 13, fontFamily: tokens.font.monoMedium }}>UGC opportunity · ${(top.ugc.cents / 100).toFixed(0)} per video {openJob ? '⌃' : '›'}</Body>
       </Pressable>}
 
       {top.ugc && openJob && <Card style={{ gap: tokens.space.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Body style={{ fontWeight: '600' }}>{top.ugc.brand} is hiring</Body>
+          <Body style={{ fontFamily: tokens.font.semibold }}>{top.ugc.brand} is hiring</Body>
           <Money cents={top.ugc.cents} />
         </View>
         <Body>{top.ugc.brief}</Body>
