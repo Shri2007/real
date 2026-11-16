@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { useQuery } from 'convex/react';
 import { useSession } from '@/lib/session';
 import { Badge, Body, Button, Card, EmptyState, Muted, Screen, SectionHeader, Title, tokens, LargeTitle } from '@/ui';
+import { CreatorScout } from '@/components/create/CreatorScout';
 import { NewTest } from '@/components/create/NewTest';
 import { Comparison, Results } from '@/components/create/Results';
 import { api } from '../../convex/_generated/api';
@@ -11,6 +12,7 @@ import { Id } from '../../convex/_generated/dataModel';
 export default function CreateScreen() {
   const { userId } = useSession();
   const gigs = useQuery(api.gigs.mine, userId ? { creatorId: userId } : 'skip');
+  const me = useQuery(api.users.get, userId ? { userId } : 'skip');
   const [mode, setMode] = useState<'mine' | 'new' | 'results' | 'compare'>('mine');
   const [selected, setSelected] = useState<Id<'gigs'> | null>(null);
   const [a, setA] = useState<Id<'gigs'> | null>(null);
@@ -39,6 +41,7 @@ export default function CreateScreen() {
           <Button variant="secondary" label={b === gig._id ? 'Selected as B' : 'Use as cut B'} disabled={a === gig._id} onPress={() => setB(gig._id)} />
         </Card>)}
         {(a || b) && <Button label="Clear A/B selection" variant="secondary" onPress={() => { setA(null); setB(null); }} />}
+        {me && me.role !== 'student' && <CreatorScout brandId={userId} />}
       </>}
     </>}
   </Screen>;

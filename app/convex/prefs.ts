@@ -185,13 +185,19 @@ async function studentState(ctx: QueryCtx, userId: Id<"users">) {
   const seenOpps = new Set<string>([...swiped.map((s) => s.oppId), ...claims.map((c) => c.oppId)].filter((x): x is Id<"ugcOpps"> => !!x));
   const signals = swiped.length + reacted.length;
   const unlocked = signals >= UGC_UNLOCK_SIGNALS;
-  const opps = unlocked ? await ctx.db.query("ugcOpps").withIndex("by_status", (q) => q.eq("status", "open")).order("desc").take(100) : [];
+  const open = unlocked ? await ctx.db.query("ugcOpps").withIndex("by_status", (q) => q.eq("status", "open")).order("desc").take(100) : [];
+  // Brands that ranked this student's take invite them to a job; invited jobs show up first, even before the deck unlocks.
+  const invites = await ctx.db.query("ugcInvites").withIndex("by_userId", (q) => q.eq("userId", userId)).take(50);
+  const invitedBy = new Map(invites.map((i) => [i.oppId as string, i.brandId]));
+  const invited = (await Promise.all(invites.map((i) => ctx.db.get(i.oppId)))).filter((o): o is Doc<"ugcOpps"> => o?.status === "open");
+  const opps = [...new Map([...invited, ...open].map((o) => [o._id as string, o])).values()];
   const matchedOpps = opps
     .filter((o) => o.brandId !== userId && !seenOpps.has(o._id) && o.claimed < o.spots)
     .map((o) => {
       const fit = (user?.creatorStyle?.bestFor ?? []).some((t) => o.tags?.includes(t));
+      const isInvited = invitedBy.has(o._id);
       const scored = scoreTags(weights, o.tags);
-      return { opp: o, ...scored, s: scored.s + (fit ? 3 : 0), fitsStyle: fit };
+      return { opp: o, ...scored, s: scored.s + (fit ? 3 : 0) + (isInvited ? 10 : 0), fitsStyle: fit, invited: isInvited };
     })
     .filter((m) => m.s > 0)
     .sort((x, y) => y.s - x.s);
@@ -226,24 +232,26 @@ export const deck = query({
       });
     }
     const jobs: Card[] = [];
+    const invitedJobs: Card[] = [];
     const style = (await ctx.db.get(userId))?.creatorStyle?.style;
-    for (const { opp: o, liked, fitsStyle } of matchedOpps.slice(0, 12)) {
+    for (const { opp: o, liked, fitsStyle, invited } of matchedOpps.slice(0, 12)) {
       const brand = await ctx.db.get(o.brandId);
       const gig = o.gigId ? await ctx.db.get(o.gigId) : null;
       const [prefix, rest] = gig?.title.includes(":") ? gig.title.split(/:\s*/, 2) : [null, gig?.title ?? null];
       const brandName = prefix ?? brand?.name ?? "A brand";
       const tagged = [...CATALOG].sort((x, y) => y.tags.filter((t) => o.tags?.includes(t)).length - x.tags.filter((t) => o.tags?.includes(t)).length)[0];
-      jobs.push({
+      (invited ? invitedJobs : jobs).push({
         kind: "ugc", id: o._id, oppId: o._id, title: brandName, subtitle: rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : o.brief,
         image: (brand?.handle && BRAND_IMAGES[brand.handle]) || tagged.image, tags: o.tags ?? [],
-        reason: fitsStyle && style ? `Fits your style · ${style}` : liked.length ? `Picked for you · you like ${liked.slice(0, 2).join(" + ")}` : "Picked for you",
+        reason: invited ? `${brandName} invited you · they ranked your take` : fitsStyle && style ? `Fits your style · ${style}` : liked.length ? `Picked for you · you like ${liked.slice(0, 2).join(" + ")}` : "Picked for you",
         ugc: { brand: brandName, brief: o.brief, cents: o.payoutCents, spotsLeft: o.spots - o.claimed },
       });
     }
     const out: Card[] = [];
     // Every third swipe overall is a brand with a matching job, so the slot doesn't drift as the deck re-ranks.
     while (items.length || jobs.length) out.push((swiped.length + out.length) % 3 === 2 && jobs.length ? jobs.shift()! : items.shift() ?? jobs.shift()!);
-    return out.slice(0, 20);
+    // Invites from brands that ranked this student's take go straight to the top.
+    return [...invitedJobs, ...out].slice(0, 20);
   },
 });
 

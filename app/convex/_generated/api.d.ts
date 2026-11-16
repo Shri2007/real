@@ -18,6 +18,7 @@ import type * as keiki from "../keiki.js";
 import type * as notify from "../notify.js";
 import type * as payments from "../payments.js";
 import type * as prefs from "../prefs.js";
+import type * as ranking from "../ranking.js";
 import type * as reactions from "../reactions.js";
 import type * as report from "../report.js";
 import type * as seed from "../seed.js";
@@ -43,6 +44,7 @@ declare const fullApi: ApiFromModules<{
   notify: typeof notify;
   payments: typeof payments;
   prefs: typeof prefs;
+  ranking: typeof ranking;
   reactions: typeof reactions;
   report: typeof report;
   seed: typeof seed;

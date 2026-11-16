@@ -1,6 +1,7 @@
 import { useQuery } from 'convex/react';
 import { useState } from 'react';
 import { View } from 'react-native';
+import { TakeFeed } from '@/components/react/TakeFeed';
 import { Watch } from '@/components/react/Watch';
 import { useSession } from '@/lib/session';
 import { Badge, Body, Button, Card, EmptyState, Money, Muted, Screen, SectionHeader, Title, tokens, LargeTitle } from '@/ui';
@@ -14,6 +15,7 @@ export default function ReactorScreen() {
   if (gigId && userId) return <Watch key={gigId} gigId={gigId} userId={userId} onBack={() => setGigId(null)} />;
   return <Screen style={{ gap: tokens.space.lg }}>
       <LargeTitle subtitle="Watch with your camera on. Laugh or don’t, you still get paid.">React</LargeTitle>
+      {userId && <TakeFeed userId={userId} />}
       <SectionHeader title="Available reactions" detail={gigs ? `${gigs.length} open` : undefined} />
       {gigs === undefined ? <Muted>Loading paid reactions…</Muted> : gigs.length === 0 ? <EmptyState title="No reactions right now" body="New paid clips land here as creators post them." />
         : gigs.map((gig) => <Card key={gig._id} style={{ gap: tokens.space.md }}>
