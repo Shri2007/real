@@ -201,9 +201,10 @@ export const demo = internalAction({
 // Seeded gigs are recognised by their stock title + the seed's fixed 10s duration and 25 slots,
 // or by a seed:* brand account. Run: npx convex run seed:hideStock  (restore: '{"restore": true}')
 export const hideStock = internalMutation({
-  args: { restore: v.optional(v.boolean()) },
+  args: { restore: v.optional(v.boolean()), titles: v.optional(v.array(v.string())) }, // titles: also hide/restore these exact gig titles
   returns: v.object({ gigs: v.number(), opps: v.number() }),
-  handler: async (ctx, { restore }) => {
+  handler: async (ctx, { restore, titles: extra }) => {
+    const extraTitles = new Set(extra ?? []);
     const seedBrandIds = new Set<string>();
     for (const b of BRANDS) {
       const u = await ctx.db.query("users").withIndex("by_handle", (q) => q.eq("handle", b.handle)).unique();
@@ -212,7 +213,7 @@ export const hideStock = internalMutation({
     const titles = new Set(GIGS.map((g) => g.title));
     const from = restore ? "done" : "live";
     const gigs = await ctx.db.query("gigs").withIndex("by_status", (q) => q.eq("status", from)).take(1000);
-    const stock = gigs.filter((g) => seedBrandIds.has(g.creatorId) || (titles.has(g.title) && g.durationMs === 10000 && g.slots === 25));
+    const stock = gigs.filter((g) => extraTitles.has(g.title) || seedBrandIds.has(g.creatorId) || (titles.has(g.title) && g.durationMs === 10000 && g.slots === 25));
     for (const g of stock) await ctx.db.patch(g._id, { status: restore ? "live" : "done" });
     const stockGigIds = new Set<string>(stock.map((g) => g._id));
     const opps = await ctx.db.query("ugcOpps").withIndex("by_status", (q) => q.eq("status", restore ? "closed" : "open")).take(1000);
