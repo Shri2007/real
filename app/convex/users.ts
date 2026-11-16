@@ -46,20 +46,45 @@ type WalletItem = {
   earnedCents: number;
   valid: boolean;
   at: number;
+  bonusCents: number;
+  flags: string[];
+  reason: string;
 };
+
+function pacificMidnight(now: number) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit", timeZoneName: "shortOffset",
+  }).formatToParts(new Date(now));
+  const part = (type: string) => parts.find((p) => p.type === type)?.value ?? "0";
+  const offset = part("timeZoneName").match(/GMT([+-])(\d{1,2})(?::(\d{2}))?/);
+  const minutes = offset ? (offset[1] === "+" ? 1 : -1) * (Number(offset[2]) * 60 + Number(offset[3] ?? 0)) : -480;
+  return Date.UTC(Number(part("year")), Number(part("month")) - 1, Number(part("day"))) - minutes * 60_000;
+}
 
 // Student wallet: balance + history of reactions, approved UGC payouts and cash-outs (+ .edu badge, linked Whop).
 export const wallet = query({
   args: { userId: v.id("users") },
+  returns: v.object({
+    balanceCents: v.number(), pendingCents: v.number(), todayEarnedCents: v.number(), dailyCapCents: v.number(),
+    trust: v.number(), nextPaidInSeconds: v.number(), items: v.array(v.object({
+      id: v.string(), kind: v.union(v.literal("reaction"), v.literal("ugc"), v.literal("payout")),
+      payoutStatus: v.optional(v.union(v.literal("pending"), v.literal("processing"), v.literal("paid"), v.literal("failed"))),
+      gigTitle: v.string(), earnedCents: v.number(), valid: v.boolean(), at: v.number(), bonusCents: v.number(),
+      flags: v.array(v.string()), reason: v.string(),
+    })),
+    verifiedStudent: v.boolean(), whopUsername: v.union(v.string(), v.null()), school: v.optional(v.string()),
+  }),
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
     const rs = await ctx.db
       .query("reactions")
       .withIndex("by_reactorId", (q) => q.eq("reactorId", args.userId))
       .order("desc")
-      .take(30);
+      .take(500);
+    const todayStart = pacificMidnight(Date.now());
+    const todayEarnedCents = rs.filter((r) => r._creationTime >= todayStart).reduce((sum, r) => sum + r.earnedCents, 0);
     const items: WalletItem[] = await Promise.all(
-      rs.map(async (r): Promise<WalletItem> => {
+      rs.slice(0, 30).map(async (r): Promise<WalletItem> => {
         const gig = await ctx.db.get(r.gigId);
         return {
           id: r._id,
@@ -68,6 +93,9 @@ export const wallet = query({
           earnedCents: r.earnedCents,
           valid: r.valid,
           at: r._creationTime,
+          bonusCents: r.bonusCents ?? 0,
+          flags: r.flags ?? [],
+          reason: r.reason ?? "",
         };
       }),
     );
@@ -87,6 +115,9 @@ export const wallet = query({
         earnedCents: opp?.payoutCents ?? 0,
         valid: true,
         at: c.approvedAt ?? c._creationTime,
+        bonusCents: 0,
+        flags: [],
+        reason: "",
       });
     }
     const payouts = await ctx.db
@@ -103,11 +134,20 @@ export const wallet = query({
         earnedCents: -p.amountCents,
         valid: p.status !== "failed",
         at: p._creationTime,
+        bonusCents: 0,
+        flags: [],
+        reason: p.failureReason ?? "",
       });
     }
     items.sort((a, b) => b.at - a.at);
+    const now = Date.now();
     return {
       balanceCents: user?.balanceCents ?? 0,
+      pendingCents: user?.pendingCents ?? 0,
+      todayEarnedCents,
+      dailyCapCents: 2500,
+      trust: Math.round((user?.trust ?? 0.5) * 100),
+      nextPaidInSeconds: Math.max(0, Math.ceil(((user?.lastReactAt ?? now) + 180_000 - now) / 1000)),
       items,
       verifiedStudent: user?.verifiedStudent ?? false,
       whopUsername: user?.whopUsername ?? null,

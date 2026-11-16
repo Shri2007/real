@@ -46,6 +46,7 @@ function Playback({ gigId, userId, onBack, title, question, videoUrl }: Props & 
   const [detectorReady, setDetectorReady] = useState(false);
   const [cameraStatus, setCameraStatus] = useState('Loading face detector…');
   const [result, setResult] = useState<Result | null>(null);
+  const payment = useQuery(api.reactions.mine, result ? { gigId, reactorId: userId } : 'skip');
   const [error, setError] = useState<string | null>(null);
   const payload = useRef<{ gigId: Id<'gigs'>; reactorId: Id<'users'>; curve: Point[]; watchedToEnd: boolean } | null>(null);
   const saving = useRef(false);
@@ -159,13 +160,27 @@ function Playback({ gigId, userId, onBack, title, question, videoUrl }: Props & 
     </>}
     {phase === 'finished' && (result ? <>
       <Card style={mediaLayout.result}>
-        <Badge tone={result.valid ? 'good' : 'bad'}>{result.valid ? 'REACTION VERIFIED' : 'NOT VERIFIED'}</Badge>
-        {result.valid ? <><Muted>You earned</Muted><Title style={{ color: tokens.accent, fontSize: 52, letterSpacing: -1.2 }}>+${(result.earnedCents / 100).toFixed(2)} ✓</Title></> : <Title>Not paid</Title>}
-        <Body>{result.valid ? 'Your watch was verified.' : 'Keep your face in frame next time.'}</Body>
+        <Badge tone={result.watchValid ? 'good' : 'bad'}>{result.watchValid ? 'WATCH VERIFIED' : 'NOT PAID'}</Badge>
+        {payment?.finalized && payment.valid ? <>
+          <Muted>YOUR EARNINGS</Muted>
+          <Title style={{ color: tokens.accent, fontSize: 42, letterSpacing: -1 }}>
+            +${(payment.earnedCents / 100).toFixed(2)} ✓
+          </Title>
+          {payment.bonusCents > 0 && <Body>
+            ${( (payment.earnedCents - payment.bonusCents) / 100).toFixed(2)} + ${(payment.bonusCents / 100).toFixed(2)} bonus for detailed feedback
+          </Body>}
+        </> : payment?.finalized ? <Title>Not paid</Title> : result.watchValid ? <Body>Record a specific voice review to finish your review and earn.</Body> : <Title>Not paid</Title>}
+        {payment?.finalized && !payment.valid ? <Body>{payment.reason}</Body> : !result.watchValid ? <Body>{result.reason}</Body> : null}
       </Card>
       <Title>{result.laughed ? 'You laughed' : 'You stayed deadpan'}</Title>
       <Body>Both count. We pay for attention, not applause.</Body>
-      {result.valid && <WhyRecorder gigId={gigId} reactorId={userId} />}
+      {result.watchValid && <>
+        <Card style={{ gap: tokens.space.xs }}>
+          <Body>Be specific: what moment worked, what moment lost you?</Body>
+          <Muted>Low-effort reviews earn $0. Detailed ones earn up to +50%.</Muted>
+        </Card>
+        <WhyRecorder gigId={gigId} reactorId={userId} />
+      </>}
       <PrimaryCTA label="Back to feed" onPress={onBack} />
     </> : <>
       <Body>{error || 'Saving your reaction…'}</Body>

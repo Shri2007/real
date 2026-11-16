@@ -271,10 +271,11 @@ export const checkTransfer = internalAction({
 });
 
 export const cashout = action({
+  // Name-only identity (no auth in this app): the session's userId is the account.
   args: { userId: v.id("users") },
   returns: v.object({ amountCents: v.number(), status: v.union(v.literal("pending"), v.literal("processing"), v.literal("paid"), v.literal("failed")) }),
-  handler: async (ctx, args): Promise<{ amountCents: number; status: "pending" | "processing" | "paid" | "failed" }> => {
-    const { payoutId, amountCents, whopUserId } = await ctx.runMutation(internal.payments.requestPayout, args);
+  handler: async (ctx, { userId }): Promise<{ amountCents: number; status: "pending" | "processing" | "paid" | "failed" }> => {
+    const { payoutId, amountCents, whopUserId } = await ctx.runMutation(internal.payments.requestPayout, { userId });
     if (!whopUserId) return { amountCents, status: "pending" };
     let t: TransferResult;
     try {

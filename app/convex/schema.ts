@@ -22,6 +22,10 @@ export default defineSchema({
     whopUsername: v.optional(v.string()),
     demoPass: v.optional(v.boolean()), // verified via the judges' demo pass instead of a .edu (verify.demoPass)
     role: v.optional(v.union(v.literal("student"), v.literal("brand"))), // picked at onboarding
+    trust: v.optional(v.number()),
+    flagCount: v.optional(v.number()),
+    lastReactAt: v.optional(v.number()),
+    pendingCents: v.optional(v.number()),
   })
     .index("by_handle", ["handle"])
     .index("by_email", ["email"]),
@@ -50,6 +54,8 @@ export default defineSchema({
     whopPaymentId: v.optional(v.string()),
     report: v.optional(v.array(v.string())), // AI "what to fix" bullets
     tags: v.optional(v.array(v.string())), // AI tags for the For you feed
+    isHoneypot: v.optional(v.boolean()),
+    expectedTags: v.optional(v.array(v.string())),
   })
     .index("by_status", ["status"])
     .index("by_creatorId", ["creatorId"]),
@@ -71,6 +77,17 @@ export default defineSchema({
     whyQuote: v.optional(v.string()),
     whyTags: v.optional(v.array(v.string())),
     whySentiment: v.optional(v.union(v.literal("pos"), v.literal("neg"), v.literal("mixed"))),
+    whyDurationMs: v.optional(v.number()),
+    qualityScore: v.optional(v.number()),
+    worked: v.optional(v.array(v.string())),
+    sucked: v.optional(v.array(v.string())),
+    bonusCents: v.optional(v.number()),
+    flags: v.optional(v.array(v.string())),
+    laughMs: v.optional(v.number()),
+    laughCount: v.optional(v.number()),
+    laughRuns: v.optional(v.array(v.object({ startMs: v.number(), endMs: v.number() }))),
+    pendingUntil: v.optional(v.number()),
+    reason: v.optional(v.string()),
   })
     .index("by_gigId", ["gigId"])
     .index("by_reactorId", ["reactorId"])

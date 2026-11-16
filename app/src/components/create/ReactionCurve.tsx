@@ -40,6 +40,7 @@ export function ReactionCurve({ series, durationSec, playheadSec, onSeek, peakSe
   const x = (sec: number) => 8 + (Math.max(0, Math.min(duration, sec)) / duration) * (width - 16);
   const y = (value: number) => 16 + (1 - Math.min(1, Math.max(0, value))) * 140;
   const path = (points: CurvePoint[], pct: boolean) => points.map((p, i) => `${i && points[i - 1].sec === p.sec - 1 ? 'L' : 'M'} ${x(p.sec)} ${y(pct ? p.laughingPct / 100 : p.avg)}`).join(' ');
+  const sustainedPath = (points: CurvePoint[]) => points.filter((p) => (p.sustainedPct ?? 0) > 0).map((p, i, all) => `${i && all[i - 1].sec === p.sec - 1 ? 'L' : 'M'} ${x(p.sec)} ${y((p.sustainedPct ?? 0) / 100)}`).join(' ');
   return <View style={{ gap: tokens.space.sm }}>
     <Muted>1.0 / 100% at top · 0 at bottom · dashed line: 0.45</Muted>
     <Pressable accessibilityLabel="Reaction timeline. Use the time buttons below to seek." onLayout={(e) => setWidth(e.nativeEvent.layout.width)} onPress={(e) => { if (width > 16) onSeek?.(Math.max(0, Math.min(duration, (e.nativeEvent.locationX - 8) / (width - 16) * duration))); }} style={{ height: 172, width: '100%' }}>
@@ -47,6 +48,7 @@ export function ReactionCurve({ series, durationSec, playheadSec, onSeek, peakSe
         {[0, 0.5, 1].map((value) => <Line key={value} x1={8} x2={width - 8} y1={y(value)} y2={y(value)} stroke={tokens.cardBorder} />)}
         <Line x1={8} x2={width - 8} y1={y(LAUGH_THRESHOLD)} y2={y(LAUGH_THRESHOLD)} stroke={tokens.muted} strokeDasharray="4 4" />
         {drawn.map((s) => <G key={s.key}>
+          <Path d={sustainedPath(s.points)} stroke={tokens.good} strokeWidth={8} opacity={0.28} fill="none" strokeLinecap="round" />
           <Path d={path(s.points, false)} stroke={s.color} strokeWidth={3} fill="none" />
           <Path d={path(s.points, true)} stroke={s.color} strokeWidth={1} strokeDasharray="2 3" fill="none" />
           {s.points.map((p) => <Circle key={p.sec} cx={x(p.sec)} cy={y(p.avg)} r={p.sec === peakSec ? 5 : 2} fill={s.color} />)}
@@ -56,6 +58,6 @@ export function ReactionCurve({ series, durationSec, playheadSec, onSeek, peakSe
       </Svg>}
     </Pressable>
     <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Muted>0:00</Muted><Muted>{fmtTime(duration)}</Muted></View>
-    <Muted>Solid: sample-weighted average score. Dotted: % of samples above 0.45, not % of people. Missing seconds are gaps. Lines between seconds are visual guides.</Muted>
+    <Muted>Solid: average score. Dotted: samples above 0.45. Green highlights: sustained laugh runs. Missing seconds are gaps.</Muted>
   </View>;
 }

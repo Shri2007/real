@@ -1,4 +1,4 @@
-export type CurvePoint = { sec: number; avg: number; laughingPct: number };
+export type CurvePoint = { sec: number; avg: number; laughingPct: number; sustainedPct?: number };
 export const LAUGH_THRESHOLD = 0.45;
 
 export function fmtTime(sec: number) {

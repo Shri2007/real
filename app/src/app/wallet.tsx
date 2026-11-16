@@ -87,8 +87,9 @@ export default function WalletScreen() {
         {wallet.verifiedStudent ? <VerifiedStudentBadge school={wallet.school} /> : null}
 
         <Card style={{ gap: tokens.space.md, paddingVertical: tokens.space.xl }}>
-          <SectionHeader title="Available balance" detail={`${valid.length} VERIFIED REACTIONS`} />
+          <SectionHeader title="Earnings" detail={`${valid.length} VERIFIED REACTIONS`} />
           <Money cents={wallet.balanceCents} size="lg" />
+          <Body>Pending ${(wallet.pendingCents / 100).toFixed(2)} · Available ${(wallet.balanceCents / 100).toFixed(2)}</Body>
           {wallet.whopUsername ? <Muted>Cash-outs go to Whop @{wallet.whopUsername}</Muted> : <>
             <Muted>Link your Whop account to get cash-outs instantly. Without it, cash-outs wait as pending.</Muted>
             <TextInput ref={whopInput} returnKeyType="done" onSubmitEditing={() => whopInput.current?.blur()} accessibilityLabel="Whop username" placeholder="Whop username" placeholderTextColor={tokens.muted} value={whopName} onChangeText={setWhopName}
@@ -122,6 +123,16 @@ export default function WalletScreen() {
           />
         </Card>
 
+        <Card style={{ gap: tokens.space.sm }}>
+          <SectionHeader title="Reviewer score" detail={`${wallet.trust}/100`} />
+          <Body>{wallet.trust < 30 ? 'Your reviews are under review.' : wallet.trust < 70 ? 'Specific, original feedback raises your score.' : 'Strong detailed reviews build trust and unlock bonuses.'}</Body>
+        </Card>
+
+        <Card style={{ gap: tokens.space.sm }}>
+          <SectionHeader title="Today’s earnings" detail={`$${(wallet.todayEarnedCents / 100).toFixed(2)} / $${(wallet.dailyCapCents / 100).toFixed(2)}`} />
+          <Muted>{wallet.nextPaidInSeconds > 0 ? `Next paid reaction in ${Math.floor(wallet.nextPaidInSeconds / 60)}:${String(wallet.nextPaidInSeconds % 60).padStart(2, '0')}` : 'You can submit another paid reaction.'}</Muted>
+        </Card>
+
         {taste ? (
           <Card style={{ gap: tokens.space.md }}>
             <SectionHeader title="Your taste" detail={`${taste.signals} SIGNALS`} />
@@ -153,14 +164,19 @@ export default function WalletScreen() {
             {wallet.items.map((i, idx) => (
               <Card key={i.id ?? `${i.at}-${idx}`} style={{ gap: tokens.space.sm }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: tokens.space.md, alignItems: 'flex-start' }}><Body style={{ flex: 1 }}>{i.gigTitle}</Body><Muted>{ago(i.at)}</Muted></View>
+                {i.flags.length > 0 && <Badge tone="bad">FLAGGED · {i.flags.join(', ')}</Badge>}
+                {i.flags.length > 0 && !!i.reason && <Muted>{i.reason}</Muted>}
                 {i.kind === 'payout' && i.payoutStatus ? (
                   <Badge tone={PAYOUT[i.payoutStatus].tone}>{`−${(-i.earnedCents / 100).toFixed(2)} · ${PAYOUT[i.payoutStatus].label}`}</Badge>
                 ) : i.kind === 'ugc' ? (
                   <Badge tone="live">{`+$${(i.earnedCents / 100).toFixed(2)} · UGC approved`}</Badge>
                 ) : i.valid ? (
-                  <Badge tone="good">+${(i.earnedCents / 100).toFixed(2)}</Badge>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space.xs }}>
+                    <Badge tone="good">+${(i.earnedCents / 100).toFixed(2)}</Badge>
+                    {i.bonusCents > 0 && <Badge tone="live">BONUS +${(i.bonusCents / 100).toFixed(2)}</Badge>}
+                  </View>
                 ) : (
-                  <Badge tone="bad">Not paid: face out of frame</Badge>
+                  <Badge tone="bad">{i.reason || 'Not paid'}</Badge>
                 )}
               </Card>
             ))}
