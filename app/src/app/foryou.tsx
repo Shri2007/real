@@ -1,7 +1,8 @@
 import { useMutation, useQuery } from 'convex/react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { DeckCard, DeckItem } from '@/components/foryou/DeckCard';
+import { CreatorLane } from '@/components/foryou/CreatorLane';
 import { MyUgc } from '@/components/foryou/MyUgc';
 import { EduVerify } from '@/components/EduVerify';
 import { useSession } from '@/lib/session';
@@ -21,16 +22,23 @@ export default function ForYouScreen() {
   const [gone, setGone] = useState<string[]>([]);
   const [openJob, setOpenJob] = useState(false);
   const [error, setError] = useState('');
-
-  if (!userId) return <Screen><Muted>Choose your name first.</Muted></Screen>;
+  const [lingered, setLingered] = useState('');
+  const shownAt = useRef(Date.now());
 
   const cards = (deck ?? []).filter((c) => !gone.includes(c.id));
   const [top, next] = cards;
+  const topId = top?.id;
+  useEffect(() => { shownAt.current = Date.now(); }, [topId]);
+
+  if (!userId) return <Screen><Muted>Choose your name first.</Muted></Screen>;
   const decide = async (card: DeckItem, dir: 'right' | 'left') => {
     setGone((g) => [...g, card.id]);
     setOpenJob(false);
     setError('');
-    try { await swipe({ userId, dir, itemKey: card.itemKey, oppId: card.oppId }); }
+    try {
+      const { lingered: long } = await swipe({ userId, dir, itemKey: card.itemKey, oppId: card.oppId, dwellMs: Date.now() - shownAt.current });
+      setLingered(long ? (dir === 'right' ? `You lingered on ${card.title.toLowerCase()}. That counts double.` : `You lingered before passing. We'll treat it as curiosity, not a no.`) : '');
+    }
     catch (e) { setError(e instanceof Error ? e.message : 'Something went wrong. Try again.'); }
   };
   const pick = async (card: DeckItem) => {
@@ -79,11 +87,13 @@ export default function ForYouScreen() {
       <Muted style={{ textAlign: 'center' }}>
         {left === null ? ' ' : left > 0 ? `Swipe ${left} more to unlock UGC opportunities` : 'UGC opportunities picked for your taste show up as you swipe'}
       </Muted>
+      {!!lingered && <Muted style={{ textAlign: 'center', color: tokens.accent }}>{lingered}</Muted>}
       {!!error && <Body style={{ color: tokens.bad, textAlign: 'center' }}>{error}</Body>}
 
       {taste && taste.liked.length > 0 && <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: tokens.space.xs, justifyContent: 'center' }}>
         {taste.liked.slice(0, 6).map((t) => <Badge key={t.tag} tone="muted">{t.tag}</Badge>)}
       </View>}
     </>}
+    {tab === 'deck' && <CreatorLane userId={userId} />}
   </Screen>;
 }
