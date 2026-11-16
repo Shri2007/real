@@ -13,6 +13,7 @@ const SCORE_LABELS = [['hook', 'Hook'], ['clarity', 'Clarity'], ['energy', 'Ener
 export function CreatorLane({ userId }: { userId: Id<'users'> }) {
   const lane = useQuery(api.prefs.lane, { userId });
   const take = useQuery(api.creator.latest, { userId });
+  const standing = useQuery(api.ranking.myStanding, { userId });
   const uploadUrl = useMutation(api.ugc.generateUploadUrl);
   const submitTake = useMutation(api.creator.submitTake);
   const [testing, setTesting] = useState(false);
@@ -60,6 +61,8 @@ export function CreatorLane({ userId }: { userId: Id<'users'> }) {
       <Badge tone="good">{`Your style · ${lane.style.style} · ${lane.style.score}/10`}</Badge>
       <Muted>{lane.style.feedback} Jobs that fit your style now show up first.</Muted>
     </View>}
+
+    {standing && <Muted>{`Your best take is #${standing.rank} of ${standing.of} in ${standing.tag}`}{standing.brandPicks ? ` · brands picked it ${standing.brandPicks}×` : ''}{standing.views ? ` · ${standing.views} views` : ''}{standing.invites ? ` · ${standing.invites} ${standing.invites === 1 ? 'invite' : 'invites'}` : ''}</Muted>}
 
     {take?.status === 'scoring' && <Muted>Scoring your take on "{take.prompt}"…</Muted>}
     {take?.status === 'failed' && <Muted style={{ color: tokens.bad }}>{take.feedback}</Muted>}

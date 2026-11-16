@@ -3,6 +3,7 @@ import { internalAction, internalMutation, internalQuery, mutation, query } from
 import { internal } from "./_generated/api";
 import { Doc } from "./_generated/dataModel";
 import { INTERESTS } from "./prefs";
+import { seedRating } from "./ranking";
 
 declare const process: { env: Record<string, string | undefined> };
 
@@ -62,8 +63,9 @@ export const saveScore = internalMutation({
       return null;
     }
     const { transcript, scores: s, style, feedback, bestFor } = result;
-    await ctx.db.patch(takeId, { status: "scored", transcript, scores: s, style, feedback });
     const score = Math.round(((s.hook + s.clarity + s.energy + s.authenticity) / 4) * 10) / 10;
+    await ctx.db.patch(takeId, { status: "scored", transcript, scores: s, style, feedback, rating: seedRating(score) });
+    await ctx.scheduler.runAfter(0, internal.ranking.aiCompare, { takeId });
     const user: Doc<"users"> | null = await ctx.db.get(take.userId);
     // Keep the best take as the student's style.
     if (user && (!user.creatorStyle || score >= user.creatorStyle.score)) {

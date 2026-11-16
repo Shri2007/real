@@ -97,7 +97,40 @@ export default defineSchema({
     scores: v.optional(v.object({ hook: v.number(), clarity: v.number(), energy: v.number(), authenticity: v.number() })),
     style: v.optional(v.string()),
     feedback: v.optional(v.string()),
-  }).index("by_userId", ["userId"]),
+    // Ranking (ranking.ts): an Elo rating per take, seeded by the AI score and moved by brand picks, peer watch time
+    // and AI head-to-heads. Takes compete within their topic (tag).
+    rating: v.optional(v.number()),
+    brandPicks: v.optional(v.number()),
+    views: v.optional(v.number()),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_status_and_tag", ["status", "tag"]),
+
+  // One head-to-head between two takes on the same topic: a brand's pick, a peer watching one longer, or an AI call.
+  takeVotes: defineTable({
+    voterId: v.optional(v.id("users")), // unset for AI
+    kind: v.union(v.literal("brand"), v.literal("peer"), v.literal("ai")),
+    winnerId: v.id("creatorTakes"),
+    loserId: v.id("creatorTakes"),
+    tag: v.string(),
+  }).index("by_voterId", ["voterId"]),
+
+  // A peer watching a student's take on the React tab; watchMs is how long they stayed on it.
+  takeViews: defineTable({
+    takeId: v.id("creatorTakes"),
+    viewerId: v.id("users"),
+    tag: v.string(),
+    watchMs: v.number(),
+  }).index("by_viewerId_and_tag", ["viewerId", "tag"]),
+
+  // A brand inviting a top-ranked student to one of its UGC jobs; the job jumps to the top of their deck.
+  ugcInvites: defineTable({
+    oppId: v.id("ugcOpps"),
+    userId: v.id("users"),
+    brandId: v.id("users"),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_brandId", ["brandId"]),
 
   // Paid UGC briefs brands post; students pick them from their feed.
   ugcOpps: defineTable({
@@ -115,7 +148,8 @@ export default defineSchema({
     whopPaymentId: v.optional(v.string()),
   })
     .index("by_status", ["status"])
-    .index("by_gigId", ["gigId"]),
+    .index("by_gigId", ["gigId"])
+    .index("by_brandId", ["brandId"]),
 
   ugcClaims: defineTable({
     oppId: v.id("ugcOpps"),
